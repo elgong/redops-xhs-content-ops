@@ -86,10 +86,10 @@ http://127.0.0.1:8080
 | `XHS_WEB_PROFILE_DIR` | `~/.redops/xhs-browser-profile` | 小红书网页登录态目录 |
 | `XHS_WEB_BROWSER_PATH` | 空 | 指定 Chrome/Edge 可执行文件路径 |
 | `XHS_WEB_HEADLESS` | `false` | 网页采集是否无头运行，首次登录建议 `false` |
-| `AI_PROVIDER` | `openai` | `openai` 或 `local` |
-| `OPENAI_API_KEY` | 空 | OpenAI API Key，GPT 分析/生成必填 |
-| `OPENAI_MODEL` | `gpt-5.5` | OpenAI 模型 |
-| `OPENAI_BASE_URL` | `https://api.openai.com` | OpenAI API 基础地址 |
+| `AI_PROVIDER` | `openai` | `openai`、`deepseek` 或 `local` |
+| `OPENAI_API_KEY` | 空 | OpenAI 或 DeepSeek API Key，AI 分析/生成必填 |
+| `OPENAI_MODEL` | `gpt-4o-mini` | 模型名；DeepSeek 可用 `deepseek-v4-flash` 或 `deepseek-v4-pro` |
+| `OPENAI_BASE_URL` | `https://api.openai.com` | API 基础地址；DeepSeek 使用 `https://api.deepseek.com` |
 
 ## 跑通完整链路
 
@@ -120,7 +120,7 @@ launchctl kickstart -k gui/$(id -u)/com.redops.local
 
 - 新建/选择关键词
 - 点击“采集”：`XHS_ADAPTER=web` 会打开小红书网页搜索并解析笔记标题、链接、作者、日期和搜索列表互动数
-- 点击“分析”：`AI_PROVIDER=openai` 调用 GPT 生成热点洞察
+- 点击“分析”：`AI_PROVIDER=openai` 或 `deepseek` 调用 AI 生成热点洞察
 - 点击“生成”：GPT 根据洞察生成标题、正文、封面字和标签
 - 审核通过或驳回重生
 - 保存草稿/定时发布需要配置官方授权的 `XHS_DRAFT_ENDPOINT` 和 `XHS_PUBLISH_ENDPOINT`
@@ -181,5 +181,5 @@ curl -X POST http://127.0.0.1:8080/api/keywords/1/import-text \
 
 - 小红书真实采集/发布能力通过 `XHSAdapter` 接口预留，默认使用 `MockXHSAdapter`，不会绕过平台登录、验证码或风控。
 - 当前 `.env` 使用 `XHS_ADAPTER=web`、`AI_PROVIDER=openai` 和 `SEED_DATA=false`，不会写入演示数据。
-- AI 文案生成与热点分析已接入 OpenAI Responses API；没有 `OPENAI_API_KEY` 时会明确报错。
+- AI 文案生成与热点分析已接入 OpenAI Responses API 和 DeepSeek Chat Completions API；没有 API Key 时会明确报错。
 - 关键词自动采集仅在 mock 模式生成模拟样本；真实模式下请使用官方授权接口、网页文本导入或人工审核导入。

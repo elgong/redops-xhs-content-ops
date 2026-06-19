@@ -56,25 +56,54 @@ func (ai *ReloadableContentAI) Update(cfg Config) {
 func (ai *ReloadableContentAI) Status() map[string]any {
 	ai.mu.RLock()
 	defer ai.mu.RUnlock()
+	configured := strings.TrimSpace(ai.cfg.OpenAIAPIKey) != ""
 	return map[string]any{
 		"ai_provider":       ai.cfg.AIProvider,
-		"openai_configured": strings.TrimSpace(ai.cfg.OpenAIAPIKey) != "",
+		"api_configured":    configured,
+		"openai_configured": configured,
 		"openai_model":      ai.cfg.OpenAIModel,
 		"openai_base_url":   ai.cfg.OpenAIBaseURL,
 	}
 }
 
 func newContentAI(cfg Config) ContentAI {
-	if cfg.AIProvider == "local" {
+	switch strings.ToLower(strings.TrimSpace(cfg.AIProvider)) {
+	case "local":
 		return LocalContentAI{}
-	}
-	return OpenAIContentAI{
-		client: OpenAIClient{
-			APIKey:  cfg.OpenAIAPIKey,
-			Model:   cfg.OpenAIModel,
-			BaseURL: cfg.OpenAIBaseURL,
-			Client:  &http.Client{Timeout: 60 * time.Second},
-		},
+	case "deepseek":
+		model := cfg.OpenAIModel
+		if model == "" || strings.HasPrefix(model, "gpt-") {
+			model = "deepseek-v4-flash"
+		}
+		baseURL := cfg.OpenAIBaseURL
+		if baseURL == "" || strings.Contains(baseURL, "api.openai.com") {
+			baseURL = "https://api.deepseek.com"
+		}
+		return OpenAIContentAI{
+			client: DeepSeekClient{
+				APIKey:  cfg.OpenAIAPIKey,
+				Model:   model,
+				BaseURL: baseURL,
+				Client:  &http.Client{Timeout: 60 * time.Second},
+			},
+		}
+	default:
+		model := cfg.OpenAIModel
+		if model == "" || strings.HasPrefix(model, "deepseek-") {
+			model = "gpt-4o-mini"
+		}
+		baseURL := cfg.OpenAIBaseURL
+		if baseURL == "" || strings.Contains(baseURL, "deepseek.com") {
+			baseURL = "https://api.openai.com"
+		}
+		return OpenAIContentAI{
+			client: OpenAIClient{
+				APIKey:  cfg.OpenAIAPIKey,
+				Model:   model,
+				BaseURL: baseURL,
+				Client:  &http.Client{Timeout: 60 * time.Second},
+			},
+		}
 	}
 }
 
@@ -127,7 +156,11 @@ func (LocalContentAI) Generate(ctx context.Context, task KeywordTask, insight In
 }
 
 type OpenAIContentAI struct {
-	client OpenAIClient
+	client TextAIClient
+}
+
+type TextAIClient interface {
+	Respond(ctx context.Context, instructions, input string) (string, error)
 }
 
 func (ai OpenAIContentAI) Analyze(ctx context.Context, task KeywordTask, posts []SourcePost) (InsightReport, error) {
@@ -307,4 +340,75 @@ func decodeJSONObject(text string, dst any) error {
 		return json.Unmarshal([]byte(text[start:end+1]), dst)
 	}
 	return fmt.Errorf("GPT 返回内容不是 JSON：%s", trimRunes(text, 300))
+}
+
+type DeepSeekClient struct {
+	APIKey  string
+	Model   string
+	BaseURL string
+	Client  *http.Client
+}
+
+func (c DeepSeekClient) Respond(ctx context.Context, instructions, input string) (string, error) {
+	if strings.TrimSpace(c.APIKey) == "" {
+		return "", fmt.Errorf("未配置 API Key，无法使用 DeepSeek 分析和生成")
+	}
+	if c.Model == "" {
+		c.Model = "deepseek-v4-flash"
+	}
+	if c.BaseURL == "" {
+		c.BaseURL = "https://api.deepseek.com"
+	}
+	if c.Client == nil {
+		c.Client = &http.Client{Timeout: 60 * time.Second}
+	}
+	payload := map[string]any{
+		"model": c.Model,
+		"messages": []map[string]string{
+			{"role": "system", "content": instructions},
+			{"role": "user", "content": input},
+		},
+		"temperature": 0.7,
+	}
+	body, _ := json.Marshal(payload)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, strings.TrimRight(c.BaseURL, "/")+"/v1/chat/completions", bytes.NewReader(body))
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Authorization", "Bearer "+c.APIKey)
+	req.Header.Set("Content-Type", "application/json")
+	res, err := c.Client.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer res.Body.Close()
+	resBody, _ := io.ReadAll(res.Body)
+	if res.StatusCode < 200 || res.StatusCode >= 300 {
+		return "", fmt.Errorf("DeepSeek API 返回 HTTP %d：%s", res.StatusCode, trimRunes(string(resBody), 600))
+	}
+	text := extractChatCompletionText(resBody)
+	if strings.TrimSpace(text) == "" {
+		return "", fmt.Errorf("DeepSeek API 未返回可用文本")
+	}
+	return text, nil
+}
+
+func extractChatCompletionText(body []byte) string {
+	var parsed struct {
+		Choices []struct {
+			Message struct {
+				Content string `json:"content"`
+			} `json:"message"`
+		} `json:"choices"`
+	}
+	if err := json.Unmarshal(body, &parsed); err != nil {
+		return ""
+	}
+	var parts []string
+	for _, choice := range parsed.Choices {
+		if strings.TrimSpace(choice.Message.Content) != "" {
+			parts = append(parts, choice.Message.Content)
+		}
+	}
+	return strings.Join(parts, "\n")
 }

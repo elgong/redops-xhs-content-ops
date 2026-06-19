@@ -446,11 +446,26 @@ func (s *Server) handleSettings(w http.ResponseWriter, r *http.Request) {
 		if cfg.AIProvider == "" {
 			cfg.AIProvider = "openai"
 		}
-		if cfg.OpenAIModel == "" {
-			cfg.OpenAIModel = "gpt-5.5"
-		}
-		if cfg.OpenAIBaseURL == "" {
-			cfg.OpenAIBaseURL = "https://api.openai.com"
+		switch cfg.AIProvider {
+		case "deepseek":
+			if cfg.OpenAIModel == "" || strings.HasPrefix(cfg.OpenAIModel, "gpt-") {
+				cfg.OpenAIModel = "deepseek-v4-flash"
+			}
+			if cfg.OpenAIBaseURL == "" || strings.Contains(cfg.OpenAIBaseURL, "api.openai.com") {
+				cfg.OpenAIBaseURL = "https://api.deepseek.com"
+			}
+		case "local":
+			if cfg.OpenAIModel == "" {
+				cfg.OpenAIModel = "local"
+			}
+		default:
+			cfg.AIProvider = "openai"
+			if cfg.OpenAIModel == "" || strings.HasPrefix(cfg.OpenAIModel, "deepseek-") {
+				cfg.OpenAIModel = "gpt-4o-mini"
+			}
+			if cfg.OpenAIBaseURL == "" || strings.Contains(cfg.OpenAIBaseURL, "deepseek.com") {
+				cfg.OpenAIBaseURL = "https://api.openai.com"
+			}
 		}
 		if ai, ok := s.service.ai.(*ReloadableContentAI); ok {
 			ai.Update(cfg)
@@ -520,10 +535,6 @@ func (s *Server) handleXHSStatus(w http.ResponseWriter, r *http.Request) {
 		aiProvider, _ = status["ai_provider"].(string)
 		openAIConfigured, _ = status["openai_configured"].(bool)
 		openAIModel, _ = status["openai_model"].(string)
-	} else if ai, ok := s.service.ai.(OpenAIContentAI); ok {
-		aiProvider = "openai"
-		openAIConfigured = strings.TrimSpace(ai.client.APIKey) != ""
-		openAIModel = ai.client.Model
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
 		"adapter":                   adapter,
