@@ -539,11 +539,13 @@ func (s *Server) handleXHSStatus(w http.ResponseWriter, r *http.Request) {
 	}
 	aiProvider := "local"
 	apiConfigured := false
+	openAIConfigured := false
 	openAIModel := ""
 	if ai, ok := s.service.ai.(*ReloadableContentAI); ok {
 		status := ai.Status()
 		aiProvider, _ = status["ai_provider"].(string)
 		apiConfigured, _ = status["api_configured"].(bool)
+		openAIConfigured, _ = status["openai_configured"].(bool)
 		openAIModel, _ = status["openai_model"].(string)
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
@@ -555,7 +557,7 @@ func (s *Server) handleXHSStatus(w http.ResponseWriter, r *http.Request) {
 		"publish_endpoint_required": true,
 		"ai_provider":               aiProvider,
 		"api_configured":            apiConfigured,
-		"openai_configured":         apiConfigured,
+		"openai_configured":         openAIConfigured,
 		"openai_model":              openAIModel,
 	})
 }
