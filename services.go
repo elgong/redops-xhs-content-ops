@@ -101,6 +101,40 @@ func (s *AppService) Collect(ctx context.Context, taskID int64) ([]SourcePost, e
 	return posts, s.store.UpdateKeyword(ctx, task)
 }
 
+func (s *AppService) ImportPosts(ctx context.Context, taskID int64, posts []SourcePost) ([]SourcePost, error) {
+	task, err := s.store.GetKeyword(ctx, taskID)
+	if err != nil {
+		return nil, err
+	}
+	if len(posts) == 0 {
+		return nil, fmt.Errorf("导入样本不能为空")
+	}
+	now := time.Now()
+	for i := range posts {
+		posts[i].KeywordTaskID = taskID
+		if strings.TrimSpace(posts[i].Title) == "" {
+			return nil, fmt.Errorf("第%d条样本标题不能为空", i+1)
+		}
+		if strings.TrimSpace(posts[i].ContentSummary) == "" {
+			posts[i].ContentSummary = "人工导入样本"
+		}
+		if strings.TrimSpace(posts[i].URL) == "" {
+			posts[i].URL = fmt.Sprintf("manual://keyword/%d/%d", taskID, now.UnixNano()+int64(i))
+		}
+		if posts[i].PublishedAt.IsZero() {
+			posts[i].PublishedAt = now
+		}
+		posts[i].CapturedAt = now
+		posts[i].HotScore = hotScore(posts[i].Views, posts[i].Likes, posts[i].Comments, posts[i].Favorites, posts[i].PublishedAt)
+	}
+	task.LastCollectedAt = &now
+	task.Status = StatusRunning
+	if err := s.store.AddSourcePosts(ctx, posts); err != nil {
+		return nil, err
+	}
+	return posts, s.store.UpdateKeyword(ctx, task)
+}
+
 func (s *AppService) Analyze(ctx context.Context, taskID int64) (InsightReport, error) {
 	posts, err := s.store.ListSourcePosts(ctx, taskID, 50)
 	if err != nil {

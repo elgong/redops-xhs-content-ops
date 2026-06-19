@@ -84,10 +84,30 @@ http://127.0.0.1:8080
 
 已接入/预留能力：
 
+- 授权样本导入：`POST /api/keywords/{id}/import`，支持人工或合规数据源导入笔记指标。
 - 官方素材上传：`POST /api/xhs/materials`，内部调用 `/ark/open_api/v3/common_controller`。
 - 草稿保存：通过 `XHS_DRAFT_ENDPOINT` 配置有权限的接口地址。
 - 发布笔记：通过 `XHS_PUBLISH_ENDPOINT` 配置有权限的接口地址。
 - 关键词笔记搜索：官方公开目录未确认通用接口，当前不会做未授权抓取；建议使用授权数据源、人工导入或申请对应数据权限。
+
+授权样本导入示例：
+
+```bash
+curl -X POST http://127.0.0.1:8080/api/keywords/1/import \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "posts": [{
+      "title": "油皮夏天真的别乱叠早C晚A",
+      "content_summary": "真实体验、步骤拆解、评论关注适用肤质",
+      "url": "https://www.xiaohongshu.com/example-authorized",
+      "views": 128000,
+      "likes": 8420,
+      "comments": 516,
+      "favorites": 2104,
+      "published_at": "2026-06-18T19:30:00+08:00"
+    }]
+  }'
+```
 
 官方参考：
 

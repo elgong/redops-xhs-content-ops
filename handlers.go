@@ -168,6 +168,23 @@ func (s *Server) handleKeywordAction(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		writeJSON(w, http.StatusOK, report)
+	case "import":
+		if r.Method != http.MethodPost {
+			methodNotAllowed(w)
+			return
+		}
+		var req struct {
+			Posts []SourcePost `json:"posts"`
+		}
+		if !decodeJSON(w, r, &req) {
+			return
+		}
+		posts, err := s.service.ImportPosts(r.Context(), id, req.Posts)
+		if err != nil {
+			writeError(w, err)
+			return
+		}
+		writeJSON(w, http.StatusCreated, posts)
 	case "posts":
 		if r.Method != http.MethodGet {
 			methodNotAllowed(w)
