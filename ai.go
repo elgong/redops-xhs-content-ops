@@ -9,6 +9,7 @@ import (
 	"math/rand"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -18,6 +19,52 @@ type ContentAI interface {
 }
 
 func NewConfiguredContentAI(cfg Config) ContentAI {
+	return NewReloadableContentAI(cfg)
+}
+
+type ReloadableContentAI struct {
+	mu    sync.RWMutex
+	cfg   Config
+	inner ContentAI
+}
+
+func NewReloadableContentAI(cfg Config) *ReloadableContentAI {
+	return &ReloadableContentAI{cfg: cfg, inner: newContentAI(cfg)}
+}
+
+func (ai *ReloadableContentAI) Analyze(ctx context.Context, task KeywordTask, posts []SourcePost) (InsightReport, error) {
+	ai.mu.RLock()
+	inner := ai.inner
+	ai.mu.RUnlock()
+	return inner.Analyze(ctx, task, posts)
+}
+
+func (ai *ReloadableContentAI) Generate(ctx context.Context, task KeywordTask, insight InsightReport, rules AppRules, account Account, instruction string) (GeneratedContent, error) {
+	ai.mu.RLock()
+	inner := ai.inner
+	ai.mu.RUnlock()
+	return inner.Generate(ctx, task, insight, rules, account, instruction)
+}
+
+func (ai *ReloadableContentAI) Update(cfg Config) {
+	ai.mu.Lock()
+	defer ai.mu.Unlock()
+	ai.cfg = cfg
+	ai.inner = newContentAI(cfg)
+}
+
+func (ai *ReloadableContentAI) Status() map[string]any {
+	ai.mu.RLock()
+	defer ai.mu.RUnlock()
+	return map[string]any{
+		"ai_provider":       ai.cfg.AIProvider,
+		"openai_configured": strings.TrimSpace(ai.cfg.OpenAIAPIKey) != "",
+		"openai_model":      ai.cfg.OpenAIModel,
+		"openai_base_url":   ai.cfg.OpenAIBaseURL,
+	}
+}
+
+func newContentAI(cfg Config) ContentAI {
 	if cfg.AIProvider == "local" {
 		return LocalContentAI{}
 	}

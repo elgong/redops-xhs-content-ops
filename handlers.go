@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -12,10 +13,11 @@ import (
 type Server struct {
 	store   Store
 	service *AppService
+	cfg     Config
 }
 
-func NewServer(store Store, service *AppService) *Server {
-	return &Server{store: store, service: service}
+func NewServer(store Store, service *AppService, cfg Config) *Server {
+	return &Server{store: store, service: service, cfg: cfg}
 }
 
 func (s *Server) routes() http.Handler {
@@ -32,6 +34,7 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("/api/publish-tasks", s.handlePublishTasks)
 	mux.HandleFunc("/api/publish/run-due", s.handleRunDue)
 	mux.HandleFunc("/api/rules", s.handleRules)
+	mux.HandleFunc("/api/settings", s.handleSettings)
 	mux.HandleFunc("/api/xhs/status", s.handleXHSStatus)
 	mux.HandleFunc("/api/xhs/materials", s.handleXHSMaterials)
 	return logMiddleware(mux)
@@ -413,6 +416,86 @@ func (s *Server) handleRules(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (s *Server) handleSettings(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		writeJSON(w, http.StatusOK, s.settingsPayload())
+	case http.MethodPut:
+		var req struct {
+			AIProvider    string `json:"ai_provider"`
+			OpenAIAPIKey  string `json:"openai_api_key"`
+			OpenAIModel   string `json:"openai_model"`
+			OpenAIBaseURL string `json:"openai_base_url"`
+		}
+		if !decodeJSON(w, r, &req) {
+			return
+		}
+		cfg := s.cfg
+		if strings.TrimSpace(req.AIProvider) != "" {
+			cfg.AIProvider = strings.ToLower(strings.TrimSpace(req.AIProvider))
+		}
+		if strings.TrimSpace(req.OpenAIAPIKey) != "" {
+			cfg.OpenAIAPIKey = strings.TrimSpace(req.OpenAIAPIKey)
+		}
+		if strings.TrimSpace(req.OpenAIModel) != "" {
+			cfg.OpenAIModel = strings.TrimSpace(req.OpenAIModel)
+		}
+		if strings.TrimSpace(req.OpenAIBaseURL) != "" {
+			cfg.OpenAIBaseURL = strings.TrimRight(strings.TrimSpace(req.OpenAIBaseURL), "/")
+		}
+		if cfg.AIProvider == "" {
+			cfg.AIProvider = "openai"
+		}
+		if cfg.OpenAIModel == "" {
+			cfg.OpenAIModel = "gpt-5.5"
+		}
+		if cfg.OpenAIBaseURL == "" {
+			cfg.OpenAIBaseURL = "https://api.openai.com"
+		}
+		if ai, ok := s.service.ai.(*ReloadableContentAI); ok {
+			ai.Update(cfg)
+		} else {
+			s.service.ai = NewConfiguredContentAI(cfg)
+		}
+		s.cfg = cfg
+		_ = os.Setenv("AI_PROVIDER", cfg.AIProvider)
+		_ = os.Setenv("OPENAI_API_KEY", cfg.OpenAIAPIKey)
+		_ = os.Setenv("OPENAI_MODEL", cfg.OpenAIModel)
+		_ = os.Setenv("OPENAI_BASE_URL", cfg.OpenAIBaseURL)
+		if err := updateDotEnv(".env", map[string]string{
+			"AI_PROVIDER":     cfg.AIProvider,
+			"OPENAI_API_KEY":  cfg.OpenAIAPIKey,
+			"OPENAI_MODEL":    cfg.OpenAIModel,
+			"OPENAI_BASE_URL": cfg.OpenAIBaseURL,
+		}); err != nil {
+			writeError(w, err)
+			return
+		}
+		writeJSON(w, http.StatusOK, s.settingsPayload())
+	default:
+		methodNotAllowed(w)
+	}
+}
+
+func (s *Server) settingsPayload() map[string]any {
+	aiStatus := map[string]any{
+		"ai_provider":       s.cfg.AIProvider,
+		"openai_configured": strings.TrimSpace(s.cfg.OpenAIAPIKey) != "",
+		"openai_model":      s.cfg.OpenAIModel,
+		"openai_base_url":   s.cfg.OpenAIBaseURL,
+	}
+	if ai, ok := s.service.ai.(*ReloadableContentAI); ok {
+		aiStatus = ai.Status()
+	}
+	return map[string]any{
+		"ai": aiStatus,
+		"xhs": map[string]any{
+			"adapter":        s.cfg.XHSAdapterMode,
+			"web_remote_url": s.cfg.XHSWebRemoteURL,
+		},
+	}
+}
+
 func (s *Server) handleXHSStatus(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		methodNotAllowed(w)
@@ -431,9 +514,16 @@ func (s *Server) handleXHSStatus(w http.ResponseWriter, r *http.Request) {
 	}
 	aiProvider := "local"
 	openAIConfigured := false
-	if ai, ok := s.service.ai.(OpenAIContentAI); ok {
+	openAIModel := ""
+	if ai, ok := s.service.ai.(*ReloadableContentAI); ok {
+		status := ai.Status()
+		aiProvider, _ = status["ai_provider"].(string)
+		openAIConfigured, _ = status["openai_configured"].(bool)
+		openAIModel, _ = status["openai_model"].(string)
+	} else if ai, ok := s.service.ai.(OpenAIContentAI); ok {
 		aiProvider = "openai"
 		openAIConfigured = strings.TrimSpace(ai.client.APIKey) != ""
+		openAIModel = ai.client.Model
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
 		"adapter":                   adapter,
@@ -444,6 +534,7 @@ func (s *Server) handleXHSStatus(w http.ResponseWriter, r *http.Request) {
 		"publish_endpoint_required": true,
 		"ai_provider":               aiProvider,
 		"openai_configured":         openAIConfigured,
+		"openai_model":              openAIModel,
 	})
 }
 

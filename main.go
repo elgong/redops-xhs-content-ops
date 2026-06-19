@@ -37,7 +37,7 @@ func main() {
 
 	server := &http.Server{
 		Addr:              cfg.Addr,
-		Handler:           NewServer(store, service).routes(),
+		Handler:           NewServer(store, service, cfg).routes(),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
