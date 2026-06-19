@@ -133,6 +133,9 @@ func (LocalContentAI) Analyze(ctx context.Context, task KeywordTask, posts []Sou
 }
 
 func (LocalContentAI) Generate(ctx context.Context, task KeywordTask, insight InsightReport, rules AppRules, account Account, instruction string) (GeneratedContent, error) {
+	if strings.Contains(strings.ToLower(task.Keyword), "codex") || strings.Contains(task.Category, "AI") {
+		return generateLocalAIToolContent(task, rules, instruction), nil
+	}
 	version := 1
 	title := fmt.Sprintf("%s真的别乱做，我踩过坑", task.Keyword)
 	if strings.Contains(instruction, "标题") || strings.Contains(instruction, "夸张") {
@@ -160,6 +163,44 @@ func (LocalContentAI) Generate(ctx context.Context, task KeywordTask, insight In
 		Status:         ContentPendingReview,
 		Version:        version,
 	}, nil
+}
+
+func generateLocalAIToolContent(task KeywordTask, rules AppRules, instruction string) GeneratedContent {
+	version := 1
+	title := "Codex 用浅了真亏，我现在主要用这 5 个场景"
+	cover := "Codex 实用场景"
+	body := "这两天看了不少 Codex 相关笔记，发现高赞内容基本不是单纯夸 AI 多强，而是把「怎么用在真实工作里」讲清楚。\n\n我目前觉得最实用的是这 5 个场景：\n\n1. 接手陌生项目\n先让 Codex 读目录结构、启动方式、核心接口和数据库表，省掉自己翻半天文件的时间。\n\n2. 改小需求\n不要只说「帮我改一下」，我会补一句：先读相关文件，按现有代码风格改，改完跑测试。效果会稳很多。\n\n3. 查 bug\n把报错、复现步骤、期望结果一起给它，让它先定位可能文件，再动代码。比直接贴一句报错靠谱。\n\n4. 写验收用例\n让它按「正常流程、异常流程、边界条件」列清单，再转成 curl 或测试代码，特别适合补漏。\n\n5. 做代码评审\n我会让它先只读评审，列阻塞项和风险点，再决定要不要改，能避免一上来乱动代码。\n\n我的使用顺序是：先让它理解项目，再让它给计划，最后才允许改文件。这样 Codex 更像一个能一起干活的工程搭子，而不是一个只会回答问题的聊天框。"
+	tags := "#Codex #AI工具 #效率工具 #程序员日常 #真实分享"
+	lowerInstruction := strings.ToLower(instruction)
+	if strings.Contains(instruction, "避坑") || strings.Contains(instruction, "踩") || strings.Contains(lowerInstruction, "pitfall") {
+		version = 2
+		title = "Codex 不是许愿机，这几个坑我踩完才会用"
+		cover = "Codex 避坑清单"
+		body = "如果你刚开始用 Codex，千万别只丢一句「帮我做完」。我一开始也是这么用，结果改得快，但返工也快。\n\n几个真实避坑点：\n\n1. 需求别太空\n差一点的说法：帮我优化页面。\n更稳的说法：保持现有风格，修复审核列表只展示待审核，非待审核不要显示审核按钮。\n\n2. 先评审，再改代码\n复杂需求我会先让它开评审或列验收标准。标准清楚以后再动手，最后能少很多返工。\n\n3. 明确哪些不能碰\n比如不要改数据库结构、不要重置用户数据、不要提交密钥。Codex 很听话，但前提是边界说清楚。\n\n4. 让它自己跑测试\n我现在都会要求：改完自己跑测试，跑不通继续修。这样它不只是写代码，还能把闭环跑完。\n\n5. 大任务拆小\n像采集、分析、生成、审核、发布这种链路，最好一段一段验收。每段都过，再看全流程。\n\n我的结论：Codex 最强的地方不是替你写几行代码，而是能把「读代码、改代码、跑测试、复盘问题」串起来。你越会给验收标准，它越像真正的开发同事。"
+	}
+	if strings.Contains(instruction, "3 个场景") || strings.Contains(instruction, "三个场景") {
+		title = "Codex 真正提效的 3 个场景，新手可以直接抄"
+		cover = "Codex 3 个用法"
+		body = "最近刷到很多 Codex 教程，我自己试下来，最适合新手先用的不是复杂自动化，而是这 3 个高频场景。\n\n场景 1：读懂一个陌生项目\n让它先回答：项目怎么启动、核心目录是什么、主要接口在哪、数据从哪里来。这个动作能把上手时间压得很低。\n\n场景 2：带验收标准改需求\n我会直接写：改完请自己跑测试，不合格继续修。比如「审核列表只显示待审核，驳回必须填原因，保存草稿失败不能污染状态」。这种标准越明确，结果越稳。\n\n场景 3：让它做第二双眼睛\n不是每次都让它马上改。先让它只读 review，按阻塞项、次要问题、建议修复项输出，很多隐藏问题会提前暴露。\n\n一个小技巧：别把 Codex 当搜索框，要把它当协作开发。给背景、给边界、给验收标准，它就能从回答问题变成真的推进项目。"
+	}
+	if instruction != "" {
+		body += "\n\n本次生成要求：" + instruction
+	}
+	risk := "low"
+	if containsAny(title+body+tags, rules.BannedPhrases) {
+		risk = "high"
+	}
+	return GeneratedContent{
+		KeywordTaskID:  task.ID,
+		Title:          title,
+		Body:           body,
+		CoverText:      cover,
+		Tags:           tags,
+		RiskLevel:      risk,
+		DuplicateScore: 0.12 + rand.Float64()*0.12,
+		Status:         ContentPendingReview,
+		Version:        version,
+	}
 }
 
 type OpenAIContentAI struct {
