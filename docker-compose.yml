@@ -1,0 +1,35 @@
+services:
+  app:
+    build: .
+    container_name: redops-app
+    depends_on:
+      - mysql
+    environment:
+      APP_ADDR: ":8080"
+      APP_STORE: mysql
+      MYSQL_DSN: "redops:redops@tcp(mysql:3306)/redops?parseTime=true&charset=utf8mb4&loc=Local"
+      AUTO_MIGRATE: "true"
+      SEED_DATA: "true"
+      SCHEDULER_ENABLED: "true"
+    ports:
+      - "8080:8080"
+
+  mysql:
+    image: mysql:8.4
+    container_name: redops-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: redops
+      MYSQL_USER: redops
+      MYSQL_PASSWORD: redops
+      TZ: Asia/Shanghai
+    ports:
+      - "3306:3306"
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+    volumes:
+      - redops_mysql:/var/lib/mysql
+
+volumes:
+  redops_mysql:

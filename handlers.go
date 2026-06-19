@@ -1,0 +1,416 @@
+package main
+
+import (
+	"encoding/json"
+	"errors"
+	"net/http"
+	"strconv"
+	"strings"
+	"time"
+)
+
+type Server struct {
+	store   Store
+	service *AppService
+}
+
+func NewServer(store Store, service *AppService) *Server {
+	return &Server{store: store, service: service}
+}
+
+func (s *Server) routes() http.Handler {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", s.handleIndex)
+	mux.HandleFunc("/api/bootstrap", s.handleBootstrap)
+	mux.HandleFunc("/api/dashboard", s.handleDashboard)
+	mux.HandleFunc("/api/accounts", s.handleAccounts)
+	mux.HandleFunc("/api/keywords", s.handleKeywords)
+	mux.HandleFunc("/api/keywords/", s.handleKeywordAction)
+	mux.HandleFunc("/api/generate", s.handleGenerate)
+	mux.HandleFunc("/api/contents", s.handleContents)
+	mux.HandleFunc("/api/contents/", s.handleContentAction)
+	mux.HandleFunc("/api/publish-tasks", s.handlePublishTasks)
+	mux.HandleFunc("/api/publish/run-due", s.handleRunDue)
+	mux.HandleFunc("/api/rules", s.handleRules)
+	return logMiddleware(mux)
+}
+
+func (s *Server) handleIndex(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path != "/" {
+		http.NotFound(w, r)
+		return
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	_, _ = w.Write(indexHTML)
+}
+
+func (s *Server) handleBootstrap(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		methodNotAllowed(w)
+		return
+	}
+	ctx := r.Context()
+	d, err := s.store.Dashboard(ctx)
+	if err != nil {
+		writeError(w, err)
+		return
+	}
+	accounts, _ := s.store.ListAccounts(ctx)
+	contents, _ := s.store.ListContents(ctx, "")
+	rules, _ := s.store.GetRules(ctx)
+	writeJSON(w, http.StatusOK, map[string]any{"dashboard": d, "accounts": accounts, "contents": contents, "rules": rules})
+}
+
+func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		methodNotAllowed(w)
+		return
+	}
+	d, err := s.store.Dashboard(r.Context())
+	if err != nil {
+		writeError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, d)
+}
+
+func (s *Server) handleAccounts(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		methodNotAllowed(w)
+		return
+	}
+	accounts, err := s.store.ListAccounts(r.Context())
+	if err != nil {
+		writeError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, accounts)
+}
+
+func (s *Server) handleKeywords(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		items, err := s.store.ListKeywords(r.Context())
+		if err != nil {
+			writeError(w, err)
+			return
+		}
+		writeJSON(w, http.StatusOK, items)
+	case http.MethodPost:
+		var req struct {
+			Keyword          string `json:"keyword"`
+			Category         string `json:"category"`
+			FrequencyMinutes int    `json:"frequency_minutes"`
+			SampleLimit      int    `json:"sample_limit"`
+		}
+		if !decodeJSON(w, r, &req) {
+			return
+		}
+		if strings.TrimSpace(req.Keyword) == "" {
+			writeError(w, errors.New("关键词不能为空"))
+			return
+		}
+		if req.Category == "" {
+			req.Category = "通用"
+		}
+		if req.FrequencyMinutes <= 0 {
+			req.FrequencyMinutes = 60
+		}
+		if req.SampleLimit <= 0 {
+			req.SampleLimit = 20
+		}
+		task, err := s.store.CreateKeyword(r.Context(), KeywordTask{
+			Keyword:          req.Keyword,
+			Category:         req.Category,
+			FrequencyMinutes: req.FrequencyMinutes,
+			SampleLimit:      req.SampleLimit,
+			Status:           StatusRunning,
+			CreatedBy:        "运营",
+		})
+		if err != nil {
+			writeError(w, err)
+			return
+		}
+		writeJSON(w, http.StatusCreated, task)
+	default:
+		methodNotAllowed(w)
+	}
+}
+
+func (s *Server) handleKeywordAction(w http.ResponseWriter, r *http.Request) {
+	id, action, ok := parseActionPath(r.URL.Path, "/api/keywords/")
+	if !ok {
+		http.NotFound(w, r)
+		return
+	}
+	switch action {
+	case "collect":
+		if r.Method != http.MethodPost {
+			methodNotAllowed(w)
+			return
+		}
+		posts, err := s.service.Collect(r.Context(), id)
+		if err != nil {
+			writeError(w, err)
+			return
+		}
+		writeJSON(w, http.StatusOK, posts)
+	case "analyze":
+		if r.Method != http.MethodPost {
+			methodNotAllowed(w)
+			return
+		}
+		report, err := s.service.Analyze(r.Context(), id)
+		if err != nil {
+			writeError(w, err)
+			return
+		}
+		writeJSON(w, http.StatusOK, report)
+	case "posts":
+		if r.Method != http.MethodGet {
+			methodNotAllowed(w)
+			return
+		}
+		posts, err := s.store.ListSourcePosts(r.Context(), id, 50)
+		if err != nil {
+			writeError(w, err)
+			return
+		}
+		writeJSON(w, http.StatusOK, posts)
+	default:
+		http.NotFound(w, r)
+	}
+}
+
+func (s *Server) handleGenerate(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		methodNotAllowed(w)
+		return
+	}
+	var req struct {
+		KeywordTaskID int64  `json:"keyword_task_id"`
+		AccountID     int64  `json:"account_id"`
+		Instruction   string `json:"instruction"`
+	}
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	if req.KeywordTaskID == 0 || req.AccountID == 0 {
+		writeError(w, errors.New("keyword_task_id 和 account_id 必填"))
+		return
+	}
+	content, err := s.service.Generate(r.Context(), req.KeywordTaskID, req.AccountID, req.Instruction)
+	if err != nil {
+		writeError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusCreated, content)
+}
+
+func (s *Server) handleContents(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		methodNotAllowed(w)
+		return
+	}
+	items, err := s.store.ListContents(r.Context(), r.URL.Query().Get("status"))
+	if err != nil {
+		writeError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, items)
+}
+
+func (s *Server) handleContentAction(w http.ResponseWriter, r *http.Request) {
+	id, action, ok := parseActionPath(r.URL.Path, "/api/contents/")
+	if !ok {
+		http.NotFound(w, r)
+		return
+	}
+	switch action {
+	case "approve":
+		if r.Method != http.MethodPost {
+			methodNotAllowed(w)
+			return
+		}
+		var req struct {
+			Reviewer string `json:"reviewer"`
+		}
+		_ = json.NewDecoder(r.Body).Decode(&req)
+		if req.Reviewer == "" {
+			req.Reviewer = "小林"
+		}
+		content, err := s.service.Approve(r.Context(), id, req.Reviewer)
+		if err != nil {
+			writeError(w, err)
+			return
+		}
+		writeJSON(w, http.StatusOK, content)
+	case "reject":
+		if r.Method != http.MethodPost {
+			methodNotAllowed(w)
+			return
+		}
+		var req struct {
+			Reviewer    string `json:"reviewer"`
+			Reason      string `json:"reason"`
+			Instruction string `json:"instruction"`
+		}
+		if !decodeJSON(w, r, &req) {
+			return
+		}
+		if req.Reviewer == "" {
+			req.Reviewer = "小林"
+		}
+		content, err := s.service.RejectAndRegenerate(r.Context(), id, req.Reviewer, req.Reason, req.Instruction)
+		if err != nil {
+			writeError(w, err)
+			return
+		}
+		writeJSON(w, http.StatusCreated, content)
+	case "save-draft":
+		if r.Method != http.MethodPost {
+			methodNotAllowed(w)
+			return
+		}
+		content, err := s.service.SaveDraft(r.Context(), id)
+		if err != nil {
+			writeError(w, err)
+			return
+		}
+		writeJSON(w, http.StatusOK, content)
+	case "schedule":
+		if r.Method != http.MethodPost {
+			methodNotAllowed(w)
+			return
+		}
+		var req struct {
+			ScheduledAt string `json:"scheduled_at"`
+		}
+		if !decodeJSON(w, r, &req) {
+			return
+		}
+		t, err := parseTime(req.ScheduledAt)
+		if err != nil {
+			writeError(w, err)
+			return
+		}
+		task, err := s.service.Schedule(r.Context(), id, t)
+		if err != nil {
+			writeError(w, err)
+			return
+		}
+		writeJSON(w, http.StatusCreated, task)
+	default:
+		http.NotFound(w, r)
+	}
+}
+
+func (s *Server) handlePublishTasks(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		methodNotAllowed(w)
+		return
+	}
+	tasks, err := s.store.ListPublishTasks(r.Context())
+	if err != nil {
+		writeError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, tasks)
+}
+
+func (s *Server) handleRunDue(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		methodNotAllowed(w)
+		return
+	}
+	count, err := s.service.RunDuePublishes(r.Context(), time.Now())
+	if err != nil {
+		writeError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"published": count})
+}
+
+func (s *Server) handleRules(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		rules, err := s.store.GetRules(r.Context())
+		if err != nil {
+			writeError(w, err)
+			return
+		}
+		writeJSON(w, http.StatusOK, rules)
+	case http.MethodPut:
+		var rules AppRules
+		if !decodeJSON(w, r, &rules) {
+			return
+		}
+		updated, err := s.store.UpdateRules(r.Context(), rules)
+		if err != nil {
+			writeError(w, err)
+			return
+		}
+		writeJSON(w, http.StatusOK, updated)
+	default:
+		methodNotAllowed(w)
+	}
+}
+
+func parseActionPath(path, prefix string) (int64, string, bool) {
+	rest := strings.Trim(strings.TrimPrefix(path, prefix), "/")
+	parts := strings.Split(rest, "/")
+	if len(parts) < 2 {
+		return 0, "", false
+	}
+	id, err := strconv.ParseInt(parts[0], 10, 64)
+	if err != nil {
+		return 0, "", false
+	}
+	return id, parts[1], true
+}
+
+func parseTime(v string) (time.Time, error) {
+	v = strings.TrimSpace(v)
+	if v == "" {
+		return time.Time{}, errors.New("scheduled_at 不能为空")
+	}
+	for _, layout := range []string{time.RFC3339, time.RFC3339Nano, "2006-01-02 15:04", "2006-01-02 15:04:05", "2006-01-02T15:04", "2006-01-02T15:04:05", "2006-01-02T15:04:05.999999"} {
+		if t, err := time.ParseInLocation(layout, v, time.Local); err == nil {
+			return t, nil
+		}
+	}
+	return time.Time{}, errors.New("时间格式应为 RFC3339 或 2006-01-02 15:04")
+}
+
+func decodeJSON(w http.ResponseWriter, r *http.Request, dst any) bool {
+	defer r.Body.Close()
+	if err := json.NewDecoder(r.Body).Decode(dst); err != nil {
+		writeError(w, err)
+		return false
+	}
+	return true
+}
+
+func writeJSON(w http.ResponseWriter, status int, v any) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(v)
+}
+
+func writeError(w http.ResponseWriter, err error) {
+	status := http.StatusBadRequest
+	if errors.Is(err, ErrNotFound) {
+		status = http.StatusNotFound
+	}
+	writeJSON(w, status, map[string]any{"error": err.Error()})
+}
+
+func methodNotAllowed(w http.ResponseWriter) {
+	writeJSON(w, http.StatusMethodNotAllowed, map[string]any{"error": "method not allowed"})
+}
+
+func logMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		next.ServeHTTP(w, r)
+	})
+}

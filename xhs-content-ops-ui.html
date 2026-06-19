@@ -1,0 +1,1190 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>小红书内容运营系统 UI 原型</title>
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --panel: #ffffff;
+      --panel-soft: #f8fafc;
+      --text: #151922;
+      --muted: #667085;
+      --line: #e5e9f0;
+      --blue: #2563eb;
+      --blue-soft: #edf3ff;
+      --green: #0f8a4b;
+      --green-soft: #eaf8ef;
+      --amber: #a15c05;
+      --amber-soft: #fff5dc;
+      --red: #c83227;
+      --red-soft: #fff0ed;
+      --violet: #7148d8;
+      --violet-soft: #f3efff;
+      --teal: #087a83;
+      --teal-soft: #e8fbf9;
+      --shadow: 0 16px 40px rgba(31, 42, 68, .08);
+      --radius: 8px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text);
+      background: var(--bg);
+      font-family: "Inter", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+      letter-spacing: 0;
+    }
+
+    button, input, textarea, select { font: inherit; }
+
+    .app {
+      display: grid;
+      grid-template-columns: 244px minmax(0, 1fr);
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      padding: 24px 16px;
+      color: #d7deea;
+      background: #101827;
+    }
+
+    .brand {
+      padding: 4px 12px 28px;
+      border-bottom: 1px solid rgba(255, 255, 255, .08);
+    }
+
+    .brand strong {
+      display: block;
+      color: #fff;
+      font-size: 20px;
+      line-height: 1.2;
+    }
+
+    .brand span {
+      display: block;
+      margin-top: 8px;
+      font-size: 12px;
+      color: #93a0b4;
+    }
+
+    .nav {
+      display: grid;
+      gap: 6px;
+      margin-top: 22px;
+    }
+
+    .nav button {
+      display: grid;
+      grid-template-columns: 24px minmax(0, 1fr);
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      min-height: 40px;
+      padding: 8px 12px;
+      color: #aab4c5;
+      background: transparent;
+      border: 0;
+      border-radius: var(--radius);
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .nav button:hover,
+    .nav button.active {
+      color: #fff;
+      background: #1e2f4d;
+    }
+
+    .nav svg,
+    .icon-btn svg,
+    .btn svg {
+      width: 18px;
+      height: 18px;
+      stroke: currentColor;
+      stroke-width: 2;
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .account-card {
+      position: absolute;
+      left: 16px;
+      right: 16px;
+      bottom: 20px;
+      padding: 14px;
+      background: rgba(255, 255, 255, .06);
+      border: 1px solid rgba(255, 255, 255, .08);
+      border-radius: var(--radius);
+    }
+
+    .account-card b {
+      display: block;
+      color: #fff;
+      font-size: 14px;
+    }
+
+    .account-card small {
+      display: block;
+      margin-top: 6px;
+      color: #93a0b4;
+      line-height: 1.5;
+    }
+
+    .main {
+      min-width: 0;
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      min-height: 72px;
+      padding: 16px 28px;
+      background: rgba(255, 255, 255, .92);
+      border-bottom: 1px solid var(--line);
+      backdrop-filter: blur(12px);
+    }
+
+    .title h1 {
+      margin: 0;
+      font-size: 22px;
+      line-height: 1.25;
+    }
+
+    .title p {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 420px;
+    }
+
+    .search {
+      position: relative;
+      flex: 1;
+      min-width: 180px;
+    }
+
+    .search svg {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      width: 16px;
+      height: 16px;
+      transform: translateY(-50%);
+      color: var(--muted);
+    }
+
+    .search input,
+    .field input,
+    .field select,
+    .field textarea {
+      width: 100%;
+      min-height: 36px;
+      padding: 8px 12px;
+      color: var(--text);
+      background: var(--panel-soft);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      outline: 0;
+    }
+
+    .search input { padding-left: 36px; }
+
+    .avatar {
+      display: grid;
+      place-items: center;
+      width: 36px;
+      height: 36px;
+      flex: 0 0 auto;
+      color: var(--blue);
+      background: var(--blue-soft);
+      border-radius: 50%;
+      font-weight: 700;
+    }
+
+    .content {
+      padding: 28px;
+    }
+
+    .view { display: none; }
+    .view.active { display: block; }
+
+    .grid {
+      display: grid;
+      gap: 16px;
+    }
+
+    .metrics {
+      grid-template-columns: repeat(4, minmax(160px, 1fr));
+    }
+
+    .two-col {
+      grid-template-columns: minmax(0, 1fr) minmax(360px, .72fr);
+      align-items: start;
+    }
+
+    .three-col {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: 0 1px 0 rgba(31, 42, 68, .02);
+    }
+
+    .card.pad { padding: 20px; }
+
+    .card-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 18px 20px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .card-head h2,
+    .card h3 {
+      margin: 0;
+      font-size: 16px;
+      line-height: 1.35;
+    }
+
+    .card-head p,
+    .muted {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .metric {
+      min-height: 108px;
+      padding: 18px;
+    }
+
+    .metric span {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .metric strong {
+      display: block;
+      margin-top: 12px;
+      font-size: 30px;
+      line-height: 1;
+    }
+
+    .metric footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .btn,
+    .icon-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 36px;
+      border-radius: var(--radius);
+      border: 1px solid var(--line);
+      background: var(--panel);
+      color: var(--text);
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .btn {
+      padding: 8px 14px;
+      font-weight: 600;
+      font-size: 13px;
+    }
+
+    .btn.primary {
+      color: #fff;
+      background: var(--blue);
+      border-color: var(--blue);
+    }
+
+    .btn.danger {
+      color: var(--red);
+      background: var(--red-soft);
+      border-color: #ffd1c9;
+    }
+
+    .btn.ghost {
+      color: var(--muted);
+      background: transparent;
+    }
+
+    .icon-btn {
+      width: 36px;
+      padding: 0;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 26px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .pill.blue { color: var(--blue); background: var(--blue-soft); }
+    .pill.green { color: var(--green); background: var(--green-soft); }
+    .pill.amber { color: var(--amber); background: var(--amber-soft); }
+    .pill.red { color: var(--red); background: var(--red-soft); }
+    .pill.violet { color: var(--violet); background: var(--violet-soft); }
+    .pill.teal { color: var(--teal); background: var(--teal-soft); }
+    .pill.gray { color: var(--muted); background: var(--panel-soft); }
+
+    .table-wrap {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 760px;
+    }
+
+    th, td {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      font-size: 13px;
+      vertical-align: middle;
+    }
+
+    th {
+      color: var(--muted);
+      background: var(--panel-soft);
+      font-weight: 600;
+    }
+
+    td:first-child {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    tr:last-child td { border-bottom: 0; }
+
+    .chart {
+      height: 260px;
+      padding: 18px;
+      background:
+        linear-gradient(to bottom, transparent 24%, var(--line) 25%, transparent 26%),
+        linear-gradient(to bottom, transparent 49%, var(--line) 50%, transparent 51%),
+        linear-gradient(to bottom, transparent 74%, var(--line) 75%, transparent 76%);
+    }
+
+    .chart svg {
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+    }
+
+    .queue-list,
+    .timeline,
+    .insight-list,
+    .template-list {
+      display: grid;
+      gap: 12px;
+      padding: 20px;
+    }
+
+    .queue-item,
+    .timeline-item,
+    .insight-item,
+    .template-item,
+    .rule-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      min-height: 50px;
+      padding: 12px 14px;
+      background: var(--panel-soft);
+      border-radius: var(--radius);
+    }
+
+    .queue-item b,
+    .timeline-item b,
+    .template-item b {
+      display: block;
+      font-size: 13px;
+    }
+
+    .queue-item small,
+    .timeline-item small,
+    .template-item small {
+      display: block;
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .filterbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+      padding: 14px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+    }
+
+    .filter-group {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .field {
+      display: grid;
+      gap: 8px;
+      min-width: 160px;
+    }
+
+    .field label {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .field textarea {
+      min-height: 120px;
+      resize: vertical;
+      line-height: 1.65;
+    }
+
+    .detail-panel {
+      display: grid;
+      gap: 14px;
+    }
+
+    .tag-cloud {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .editor-layout {
+      display: grid;
+      grid-template-columns: 360px minmax(0, 1fr);
+      gap: 16px;
+      align-items: start;
+    }
+
+    .option {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 14px;
+      background: var(--panel-soft);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      cursor: pointer;
+    }
+
+    .option.selected {
+      background: var(--blue-soft);
+      border-color: #b8ccff;
+    }
+
+    .textarea-preview {
+      min-height: 240px;
+      padding: 16px;
+      line-height: 1.8;
+      background: var(--panel-soft);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      font-size: 14px;
+    }
+
+    .drawer-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 380px;
+      gap: 16px;
+      align-items: start;
+    }
+
+    .review-drawer {
+      position: sticky;
+      top: 92px;
+      max-height: calc(100vh - 120px);
+      overflow: auto;
+    }
+
+    .preview-box {
+      min-height: 184px;
+      padding: 16px;
+      background: var(--panel-soft);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      line-height: 1.75;
+      font-size: 14px;
+    }
+
+    .calendar {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(130px, 1fr));
+      gap: 10px;
+      overflow-x: auto;
+    }
+
+    .day {
+      min-height: 520px;
+      padding: 14px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+    }
+
+    .day-head {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 14px;
+      font-weight: 700;
+      font-size: 13px;
+    }
+
+    .event {
+      display: grid;
+      gap: 4px;
+      margin-top: 10px;
+      padding: 10px;
+      border-radius: var(--radius);
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .event small {
+      color: currentColor;
+      opacity: .75;
+      font-weight: 500;
+    }
+
+    .conflict {
+      margin-top: 16px;
+      padding: 16px 18px;
+      color: var(--red);
+      background: var(--red-soft);
+      border: 1px solid #ffd1c9;
+      border-radius: var(--radius);
+      font-weight: 600;
+      font-size: 13px;
+    }
+
+    .rule-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      align-items: start;
+    }
+
+    .checkbox-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .check {
+      display: grid;
+      grid-template-columns: 22px minmax(0, 1fr);
+      gap: 10px;
+      align-items: center;
+      padding: 10px 0;
+      font-size: 14px;
+    }
+
+    .check span:first-child {
+      display: grid;
+      place-items: center;
+      width: 20px;
+      height: 20px;
+      color: #fff;
+      background: var(--blue);
+      border-radius: 5px;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 20;
+      display: none;
+      place-items: center;
+      padding: 20px;
+      background: rgba(8, 15, 30, .44);
+    }
+
+    .modal-backdrop.open { display: grid; }
+
+    .modal {
+      width: min(560px, 100%);
+      background: var(--panel);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .modal header,
+    .modal footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 18px 20px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .modal footer {
+      justify-content: flex-end;
+      border-top: 1px solid var(--line);
+      border-bottom: 0;
+    }
+
+    .modal h2 {
+      margin: 0;
+      font-size: 18px;
+    }
+
+    .modal-body {
+      display: grid;
+      gap: 16px;
+      padding: 20px;
+    }
+
+    .toast {
+      position: fixed;
+      right: 24px;
+      bottom: 24px;
+      z-index: 30;
+      display: none;
+      min-width: 260px;
+      padding: 14px 16px;
+      color: var(--green);
+      background: var(--green-soft);
+      border: 1px solid #bfeacc;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      font-weight: 600;
+      font-size: 13px;
+    }
+
+    .toast.show { display: block; }
+
+    @media (max-width: 1180px) {
+      .app { grid-template-columns: 1fr; }
+      .sidebar {
+        position: relative;
+        height: auto;
+        padding-bottom: 16px;
+      }
+      .brand { padding-bottom: 18px; }
+      .nav {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+      .account-card { position: static; margin-top: 18px; }
+      .metrics,
+      .two-col,
+      .three-col,
+      .editor-layout,
+      .drawer-layout,
+      .rule-grid {
+        grid-template-columns: 1fr;
+      }
+      .review-drawer { position: static; max-height: none; }
+    }
+
+    @media (max-width: 720px) {
+      .topbar {
+        align-items: stretch;
+        flex-direction: column;
+      }
+      .top-actions {
+        min-width: 0;
+        width: 100%;
+      }
+      .content { padding: 18px; }
+      .nav { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .metrics { grid-template-columns: 1fr; }
+      .card-head,
+      .filterbar {
+        align-items: stretch;
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <strong>RED OPS</strong>
+        <span>小红书内容运营系统</span>
+      </div>
+      <nav class="nav" aria-label="主导航">
+        <button class="active" data-view="dashboard" data-title="工作台" data-subtitle="今日内容生产、审核和发布概览"></button>
+        <button data-view="keywords" data-title="关键词监控" data-subtitle="配置关键词、采集频率和运行状态"></button>
+        <button data-view="insights" data-title="热点分析" data-subtitle="查看爆文样本、热度指标和风格拆解"></button>
+        <button data-view="generate" data-title="内容生成" data-subtitle="基于热点洞察生成标题、正文、封面和标签"></button>
+        <button data-view="review" data-title="审核中心" data-subtitle="列表审核、驳回原因和重新生成闭环"></button>
+        <button data-view="calendar" data-title="发布日历" data-subtitle="按账号和时间管理草稿发布计划"></button>
+        <button data-view="accounts" data-title="账号管理" data-subtitle="管理授权账号、发布额度和账号规则"></button>
+        <button data-view="rules" data-title="规则设置" data-subtitle="配置品牌语气、合规规则和生成模板"></button>
+      </nav>
+      <div class="account-card">
+        <b>品牌号 A</b>
+        <small>授权正常<br />今日排期 3 / 8</small>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="title">
+          <h1 id="pageTitle">工作台</h1>
+          <p id="pageSubtitle">今日内容生产、审核和发布概览</p>
+        </div>
+        <div class="top-actions">
+          <div class="search">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+            <input type="search" placeholder="搜索关键词、笔记、账号" />
+          </div>
+          <button class="btn primary" data-action="toast">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>
+            新建任务
+          </button>
+          <div class="avatar">宫</div>
+        </div>
+      </header>
+
+      <section class="content">
+        <div class="view active" id="dashboard">
+          <div class="grid metrics">
+            <div class="card metric"><span>今日采集</span><strong>128</strong><footer><span>较昨日</span><span class="pill green">+18%</span></footer></div>
+            <div class="card metric"><span>待审核</span><strong>24</strong><footer><span>含高风险</span><span class="pill amber">3 条</span></footer></div>
+            <div class="card metric"><span>已排期</span><strong>16</strong><footer><span>未来 7 天</span><span class="pill green">正常</span></footer></div>
+            <div class="card metric"><span>发布失败</span><strong>2</strong><footer><span>需处理</span><span class="pill red">异常</span></footer></div>
+          </div>
+          <div class="grid two-col" style="margin-top:16px;">
+            <div class="card">
+              <div class="card-head">
+                <div><h2>关键词热度趋势</h2><p>近 7 天综合热度变化</p></div>
+                <span class="pill blue">护肤早C晚A</span>
+              </div>
+              <div class="chart">
+                <svg viewBox="0 0 600 220" role="img" aria-label="趋势图">
+                  <polyline points="12,170 100,148 190,160 280,96 370,116 460,62 588,82" stroke="#2563eb" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"></polyline>
+                  <polyline points="12,190 100,176 190,138 280,132 370,100 460,94 588,56" stroke="#087a83" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity=".75"></polyline>
+                </svg>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-head"><div><h2>待处理队列</h2><p>优先处理审核与发布异常</p></div></div>
+              <div class="queue-list">
+                <div class="queue-item"><div><b>油皮夏天别乱叠护肤</b><small>待审核 · 低风险</small></div><span class="pill amber">待审核</span></div>
+                <div class="queue-item"><div><b>通勤包这样装更轻</b><small>生成中 · 预计 2 分钟</small></div><span class="pill violet">生成中</span></div>
+                <div class="queue-item"><div><b>早八妆容 5 分钟</b><small>已驳回 · 缺少真实体验</small></div><span class="pill red">重生</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="grid two-col" style="margin-top:16px;">
+            <div class="card">
+              <div class="card-head"><div><h2>今日发布排期</h2><p>账号和时间冲突会自动提示</p></div></div>
+              <div class="timeline">
+                <div class="timeline-item"><div><b>10:30 护肤早C晚A</b><small>品牌号 A · 已保存草稿</small></div><span class="pill green">待发布</span></div>
+                <div class="timeline-item"><div><b>14:00 通勤包收纳</b><small>品牌号 B · 已保存草稿</small></div><span class="pill green">待发布</span></div>
+                <div class="timeline-item"><div><b>19:30 夏季油皮护肤</b><small>品牌号 A · 需检查相似内容</small></div><span class="pill amber">冲突</span></div>
+                <div class="timeline-item"><div><b>21:00 周末探店清单</b><small>品牌号 C · 待授权确认</small></div><span class="pill red">阻塞</span></div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-head"><div><h2>AI 洞察摘要</h2><p>从样本和评论聚合得到</p></div></div>
+              <div class="insight-list">
+                <div class="insight-item">爆款标题更偏体验式：真的、别再、后悔没早知道</div>
+                <div class="insight-item">评论高频问题集中在适用肤质、价格和使用顺序</div>
+                <div class="insight-item">建议今晚 19:30 发布油皮护肤方向内容</div>
+                <div class="insight-item" style="color:var(--red);">注意避免诱导互动和功效绝对化表达</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="view" id="keywords">
+          <div class="filterbar">
+            <div class="filter-group">
+              <button class="btn primary" data-action="toast">新增关键词</button>
+              <button class="btn" data-action="toast">批量导入</button>
+              <button class="btn ghost" data-action="toast">暂停全部</button>
+            </div>
+            <div class="filter-group">
+              <span class="pill green">运行中 12</span>
+              <span class="pill red">异常 1</span>
+            </div>
+          </div>
+          <div class="card table-wrap">
+            <table>
+              <thead><tr><th>关键词</th><th>类目</th><th>最近采集</th><th>样本数</th><th>平均热度</th><th>爆款数</th><th>状态</th><th>操作</th></tr></thead>
+              <tbody>
+                <tr><td>护肤早C晚A</td><td>美妆</td><td>10 分钟前</td><td>80</td><td>82</td><td>12</td><td><span class="pill green">运行中</span></td><td><button class="btn ghost" data-nav="insights">查看</button></td></tr>
+                <tr><td>通勤包收纳</td><td>时尚</td><td>28 分钟前</td><td>64</td><td>76</td><td>8</td><td><span class="pill green">运行中</span></td><td><button class="btn ghost" data-action="toast">暂停</button></td></tr>
+                <tr><td>低卡早餐</td><td>食品</td><td>1 小时前</td><td>92</td><td>71</td><td>9</td><td><span class="pill gray">暂停</span></td><td><button class="btn ghost" data-action="toast">启动</button></td></tr>
+                <tr><td>上海周末去哪</td><td>本地</td><td>异常</td><td>0</td><td>-</td><td>-</td><td><span class="pill red">异常</span></td><td><button class="btn ghost" data-action="toast">修复</button></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="card pad" style="margin-top:16px;">
+            <h3>关键词详情：护肤早C晚A</h3>
+            <p class="muted">采集范围：近 7 天 · 排序：综合热度 · 数据源：授权接口 / 人工导入</p>
+            <div class="grid three-col" style="margin-top:16px;">
+              <div class="insight-item">标题结构：痛点 + 真实体验 + 结果</div>
+              <div class="insight-item">高频词：油皮、夏天、早C晚A、别乱叠</div>
+              <div class="insight-item">生成建议：降低广告感，加入个人场景</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="view" id="insights">
+          <div class="filterbar">
+            <div class="filter-group">
+              <div class="field"><select><option>关键词：护肤早C晚A</option><option>通勤包收纳</option></select></div>
+              <div class="field"><select><option>时间：近 7 天</option><option>近 30 天</option></select></div>
+              <div class="field"><select><option>排序：热度分</option><option>发布时间</option><option>评论数</option></select></div>
+            </div>
+            <button class="btn primary" data-nav="generate">生成文案</button>
+          </div>
+          <div class="grid two-col">
+            <div class="card table-wrap">
+              <table>
+                <thead><tr><th>爆文标题</th><th>浏览</th><th>点赞</th><th>评论</th><th>收藏</th><th>热度分</th></tr></thead>
+                <tbody>
+                  <tr><td>油皮夏天真的别乱叠早C晚A</td><td>12.8w</td><td>8,420</td><td>516</td><td>2,104</td><td><span class="pill blue">94</span></td></tr>
+                  <tr><td>早C晚A用错顺序脸真的会闹</td><td>9.7w</td><td>6,112</td><td>420</td><td>1,880</td><td><span class="pill blue">89</span></td></tr>
+                  <tr><td>预算百元的夏季护肤组合</td><td>7.3w</td><td>4,001</td><td>302</td><td>1,220</td><td><span class="pill teal">82</span></td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="grid">
+              <div class="card pad detail-panel">
+                <h3>风格拆解</h3>
+                <div class="insight-item">语气：像朋友提醒，少用官方口吻</div>
+                <div class="insight-item">结构：反常识开头 + 个人场景 + 清单</div>
+                <div class="insight-item">标题：别乱、真的、后悔没早知道</div>
+                <div class="insight-item" style="color:var(--red);">风险：避免绝对化功效和诱导互动</div>
+              </div>
+              <div class="card pad">
+                <h3>评论关注点</h3>
+                <div class="tag-cloud" style="margin-top:14px;">
+                  <span class="pill blue">敏感肌能不能用</span>
+                  <span class="pill gray">和 A 醇怎么错开</span>
+                  <span class="pill gray">学生党预算</span>
+                  <span class="pill gray">白天防晒搭配</span>
+                  <span class="pill gray">用了刺痛怎么办</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="view" id="generate">
+          <div class="editor-layout">
+            <div class="card pad detail-panel">
+              <h3>参考洞察</h3>
+              <div class="insight-item">关键词：护肤早C晚A</div>
+              <div class="insight-item">目标人群：油皮、通勤党</div>
+              <div class="insight-item">语气：真实分享、轻提醒</div>
+              <div class="insight-item">卖点：清爽、不搓泥、顺序清楚</div>
+              <div class="insight-item" style="color:var(--red);">禁用：最有效、保证、立刻见效</div>
+            </div>
+            <div class="card pad detail-panel">
+              <div class="card-head" style="padding:0 0 16px;">
+                <div><h2>生成结果</h2><p>标题、正文、封面文案和话题标签</p></div>
+                <div class="filter-group"><button class="btn" data-action="toast">重新生成</button><button class="btn primary" data-nav="review">提交审核</button></div>
+              </div>
+              <h3>标题候选</h3>
+              <div class="option selected"><span>油皮夏天真的别乱叠早C晚A</span><span class="pill blue">推荐</span></div>
+              <div class="option"><span>早C晚A 用错顺序脸真的会闹</span><span class="pill gray">候选</span></div>
+              <div class="option"><span>这套夏季护肤顺序我想早点知道</span><span class="pill gray">候选</span></div>
+              <h3>正文</h3>
+              <div class="textarea-preview">
+                夏天油皮早C晚A别乱叠，我之前就是白天猛上精华，晚上又叠太多，结果脸又闷又刺。后来把步骤拆简单：早上抗氧 + 防晒，晚上修护优先，A 类产品隔天用，肤感反而稳很多。<br /><br />
+                适合想精简护肤、又怕早C晚A翻车的人。<br /><br />
+                <span style="color:var(--blue);font-weight:700;">#油皮护肤 #早C晚A #夏季护肤 #护肤顺序</span>
+              </div>
+              <div class="tag-cloud">
+                <span class="pill green">未发现绝对化功效</span>
+                <span class="pill teal">重复度 18%</span>
+                <span class="pill amber">广告感中低</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="view" id="review">
+          <div class="drawer-layout">
+            <div>
+              <div class="filterbar">
+                <div class="filter-group">
+                  <span class="pill gray">全部</span>
+                  <span class="pill amber">待审核 24</span>
+                  <span class="pill red">已驳回 7</span>
+                  <span class="pill green">已通过 31</span>
+                  <span class="pill red">发布失败 2</span>
+                </div>
+              </div>
+              <div class="card table-wrap">
+                <table>
+                  <thead><tr><th>标题</th><th>关键词</th><th>账号</th><th>风险</th><th>状态</th><th>审核人</th><th>操作</th></tr></thead>
+                  <tbody>
+                    <tr><td>油皮夏天真的别乱叠</td><td>护肤早C晚A</td><td>品牌号 A</td><td><span class="pill green">低风险</span></td><td><span class="pill amber">待审核</span></td><td>未分配</td><td><button class="btn ghost" data-action="select-review">查看</button></td></tr>
+                    <tr><td>通勤包收纳 5 件套</td><td>通勤包</td><td>品牌号 B</td><td><span class="pill green">低风险</span></td><td><span class="pill amber">待审核</span></td><td>小林</td><td><button class="btn ghost" data-action="select-review">查看</button></td></tr>
+                    <tr><td>早餐这样吃瘦很快</td><td>低卡早餐</td><td>品牌号 C</td><td><span class="pill red">高风险</span></td><td><span class="pill red">已驳回</span></td><td>阿宁</td><td><button class="btn ghost" data-action="open-reject">重生</button></td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <aside class="card pad review-drawer detail-panel">
+              <h3>审核详情</h3>
+              <p class="muted">油皮夏天真的别乱叠早C晚A</p>
+              <div class="preview-box">
+                夏天油皮早C晚A别乱叠，我之前就是白天猛上精华，晚上又叠太多，结果脸又闷又刺。后来把步骤拆简单，肤感反而稳很多。
+              </div>
+              <div class="tag-cloud">
+                <span class="pill green">低风险</span>
+                <span class="pill teal">原创度 82%</span>
+                <span class="pill amber">广告感中低</span>
+              </div>
+              <div class="field">
+                <label>驳回原因</label>
+                <textarea placeholder="请输入原因，例如：标题太夸张，缺少真实体验感"></textarea>
+              </div>
+              <div class="filter-group">
+                <button class="btn primary" data-action="approve">通过</button>
+                <button class="btn danger" data-action="open-reject">驳回并重新生成</button>
+              </div>
+            </aside>
+          </div>
+        </div>
+
+        <div class="view" id="calendar">
+          <div class="filterbar">
+            <div class="filter-group">
+              <strong>2026 年 6 月</strong>
+              <span class="pill blue">周视图</span>
+            </div>
+            <div class="filter-group"><button class="btn" data-action="toast">上一周</button><button class="btn" data-action="toast">下一周</button><button class="btn primary" data-action="toast">新建排期</button></div>
+          </div>
+          <div class="calendar">
+            <div class="day"><div class="day-head"><span>周一</span><span>15</span></div><div class="event" style="color:var(--blue);background:var(--blue-soft);"><b>10:30</b><small>护肤早C晚A</small></div></div>
+            <div class="day"><div class="day-head"><span>周二</span><span>16</span></div><div class="event" style="color:var(--teal);background:var(--teal-soft);"><b>14:00</b><small>通勤包收纳</small></div></div>
+            <div class="day"><div class="day-head"><span>周三</span><span>17</span></div></div>
+            <div class="day"><div class="day-head"><span>周四</span><span>18</span></div></div>
+            <div class="day"><div class="day-head"><span>周五</span><span>19</span></div><div class="event" style="color:var(--amber);background:var(--amber-soft);"><b>19:30</b><small>油皮夏季护肤</small></div></div>
+            <div class="day"><div class="day-head"><span>周六</span><span>20</span></div><div class="event" style="color:var(--green);background:var(--green-soft);"><b>21:00</b><small>周末探店</small></div></div>
+            <div class="day"><div class="day-head"><span>周日</span><span>21</span></div></div>
+          </div>
+          <div class="conflict">冲突提醒：品牌号 A 在 19:30 前后已有相似护肤内容，建议错开 90 分钟或更换角度。</div>
+        </div>
+
+        <div class="view" id="accounts">
+          <div class="card table-wrap">
+            <table>
+              <thead><tr><th>账号</th><th>类型</th><th>授权</th><th>今日排期</th><th>最近发布</th><th>异常状态</th><th>操作</th></tr></thead>
+              <tbody>
+                <tr><td>品牌号 A</td><td>品牌号</td><td><span class="pill green">正常</span></td><td>3 / 8</td><td>2 小时前</td><td><span class="pill green">无异常</span></td><td><button class="btn ghost" data-action="toast">设置</button></td></tr>
+                <tr><td>品牌号 B</td><td>企业号</td><td><span class="pill green">正常</span></td><td>1 / 6</td><td>昨天</td><td><span class="pill green">无异常</span></td><td><button class="btn ghost" data-action="toast">设置</button></td></tr>
+                <tr><td>达人号 C</td><td>个人号</td><td><span class="pill amber">待确认</span></td><td>0 / 3</td><td>3 天前</td><td><span class="pill red">需登录</span></td><td><button class="btn ghost" data-action="toast">处理</button></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="card pad" style="margin-top:16px;">
+            <h3>账号策略：品牌号 A</h3>
+            <div class="grid three-col" style="margin-top:16px;">
+              <div class="rule-item">每日最多发布 8 篇</div>
+              <div class="rule-item">同类内容间隔至少 90 分钟</div>
+              <div class="rule-item">默认审核人：小林</div>
+              <div class="rule-item">禁用词库：功效绝对化、诱导关注、站外导流</div>
+              <div class="rule-item">发布时间建议：10:30、14:00、19:30、21:00</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="view" id="rules">
+          <div class="rule-grid">
+            <div class="card pad detail-panel">
+              <h3>品牌语气</h3>
+              <div class="tag-cloud">
+                <span class="pill blue">真实分享</span>
+                <span class="pill gray">轻专业</span>
+                <span class="pill gray">少广告感</span>
+                <span class="pill gray">朋友式提醒</span>
+              </div>
+              <div class="field">
+                <label>禁用表达</label>
+                <textarea>保证见效、最有效、立刻变白、关注领取、私信购买、微信联系</textarea>
+              </div>
+              <h3>审核规则</h3>
+              <div class="checkbox-list">
+                <div class="check"><span>✓</span><span>高风险内容必须二审</span></div>
+                <div class="check"><span>✓</span><span>驳回必须填写原因</span></div>
+                <div class="check"><span>✓</span><span>发布前再次检查重复度</span></div>
+                <div class="check"><span>✓</span><span>商业合作内容必须标记</span></div>
+              </div>
+              <button class="btn primary" data-action="toast">保存规则</button>
+            </div>
+            <div class="card">
+              <div class="card-head"><div><h2>生成模板</h2><p>审核驳回时也会继承模板约束</p></div></div>
+              <div class="template-list">
+                <div class="template-item"><div><b>痛点提醒型</b><small>开头钩子 + 场景 + 方法 + 标签</small></div><span class="pill blue">默认</span></div>
+                <div class="template-item"><div><b>清单干货型</b><small>问题拆解 + 步骤 + 注意事项</small></div><span class="pill gray">可用</span></div>
+                <div class="template-item"><div><b>真实测评型</b><small>使用前后 + 主观体验 + 适用人群</small></div><span class="pill gray">可用</span></div>
+                <div class="template-item"><div><b>评论答疑型</b><small>高频问题 + 逐条回答 + 温和建议</small></div><span class="pill gray">可用</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="modal-backdrop" id="rejectModal" role="dialog" aria-modal="true" aria-labelledby="rejectTitle">
+    <div class="modal">
+      <header>
+        <h2 id="rejectTitle">驳回并重新生成</h2>
+        <button class="icon-btn" data-action="close-modal" aria-label="关闭">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+        </button>
+      </header>
+      <div class="modal-body">
+        <div class="field">
+          <label>驳回原因 *</label>
+          <textarea id="rejectReason" placeholder="例如：标题太夸张，缺少真实体验感"></textarea>
+        </div>
+        <div class="field">
+          <label>重新生成要求</label>
+          <textarea placeholder="例如：保留产品卖点，减少促销语气，加入个人使用场景"></textarea>
+        </div>
+      </div>
+      <footer>
+        <button class="btn" data-action="close-modal">取消</button>
+        <button class="btn danger" data-action="reject-submit">驳回并重新生成</button>
+      </footer>
+    </div>
+  </div>
+
+  <div class="toast" id="toast">操作已记录，原型中不连接真实服务。</div>
+
+  <script>
+    const iconMap = {
+      dashboard: '<svg viewBox="0 0 24 24"><path d="M4 13h6V4H4z"></path><path d="M14 20h6V4h-6z"></path><path d="M4 20h6v-3H4z"></path></svg>',
+      keywords: '<svg viewBox="0 0 24 24"><path d="M4 7h16"></path><path d="M7 4v6"></path><path d="M6 17h12"></path><path d="M17 14v6"></path></svg>',
+      insights: '<svg viewBox="0 0 24 24"><path d="M4 19V5"></path><path d="M4 19h16"></path><path d="m7 15 4-4 3 3 5-7"></path></svg>',
+      generate: '<svg viewBox="0 0 24 24"><path d="M12 3v4"></path><path d="M12 17v4"></path><path d="M3 12h4"></path><path d="M17 12h4"></path><path d="m6 6 3 3"></path><path d="m15 15 3 3"></path><path d="m18 6-3 3"></path><path d="m9 15-3 3"></path></svg>',
+      review: '<svg viewBox="0 0 24 24"><path d="M9 11l2 2 4-5"></path><path d="M5 4h14v16H5z"></path></svg>',
+      calendar: '<svg viewBox="0 0 24 24"><path d="M7 3v4"></path><path d="M17 3v4"></path><path d="M4 8h16"></path><path d="M5 5h14v16H5z"></path></svg>',
+      accounts: '<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c1.5-4 14.5-4 16 0"></path></svg>',
+      rules: '<svg viewBox="0 0 24 24"><path d="M12 3 4 7v6c0 5 3.5 7.5 8 8 4.5-.5 8-3 8-8V7z"></path><path d="m9 12 2 2 4-5"></path></svg>'
+    };
+
+    const navButtons = document.querySelectorAll('.nav button');
+    navButtons.forEach((button) => {
+      const view = button.dataset.view;
+      button.innerHTML = `${iconMap[view]}<span>${button.dataset.title}</span>`;
+    });
+
+    function showView(viewId) {
+      document.querySelectorAll('.view').forEach((view) => view.classList.toggle('active', view.id === viewId));
+      navButtons.forEach((button) => {
+        const active = button.dataset.view === viewId;
+        button.classList.toggle('active', active);
+        if (active) {
+          document.getElementById('pageTitle').textContent = button.dataset.title;
+          document.getElementById('pageSubtitle').textContent = button.dataset.subtitle;
+        }
+      });
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function showToast(message) {
+      const toast = document.getElementById('toast');
+      toast.textContent = message || '操作已记录，原型中不连接真实服务。';
+      toast.classList.add('show');
+      window.clearTimeout(showToast.timer);
+      showToast.timer = window.setTimeout(() => toast.classList.remove('show'), 2200);
+    }
+
+    function openRejectModal() {
+      document.getElementById('rejectModal').classList.add('open');
+      document.getElementById('rejectReason').focus();
+    }
+
+    function closeRejectModal() {
+      document.getElementById('rejectModal').classList.remove('open');
+    }
+
+    document.addEventListener('click', (event) => {
+      const navButton = event.target.closest('.nav button');
+      if (navButton) showView(navButton.dataset.view);
+
+      const directNav = event.target.closest('[data-nav]');
+      if (directNav) showView(directNav.dataset.nav);
+
+      const action = event.target.closest('[data-action]')?.dataset.action;
+      if (!action) return;
+      if (action === 'toast') showToast();
+      if (action === 'approve') showToast('审核通过，内容已进入保存草稿队列。');
+      if (action === 'select-review') showToast('已打开审核详情。');
+      if (action === 'open-reject') openRejectModal();
+      if (action === 'close-modal') closeRejectModal();
+      if (action === 'reject-submit') {
+        closeRejectModal();
+        showToast('已驳回，并带原因创建重新生成任务。');
+      }
+    });
+
+    document.getElementById('rejectModal').addEventListener('click', (event) => {
+      if (event.target.id === 'rejectModal') closeRejectModal();
+    });
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') closeRejectModal();
+    });
+  </script>
+</body>
+</html>
