@@ -19,6 +19,14 @@ func LoadConfig() Config {
 		XHSAccessToken:     env("XHS_ACCESS_TOKEN", ""),
 		XHSDraftEndpoint:   env("XHS_DRAFT_ENDPOINT", ""),
 		XHSPublishEndpoint: env("XHS_PUBLISH_ENDPOINT", ""),
+		XHSWebProfileDir:   env("XHS_WEB_PROFILE_DIR", os.ExpandEnv("$HOME/.redops/xhs-browser-profile")),
+		XHSWebBrowserPath:  env("XHS_WEB_BROWSER_PATH", ""),
+		XHSWebRemoteURL:    env("XHS_WEB_REMOTE_URL", "http://127.0.0.1:9222"),
+		XHSWebHeadless:     envBool("XHS_WEB_HEADLESS", false),
+		AIProvider:         strings.ToLower(env("AI_PROVIDER", "openai")),
+		OpenAIAPIKey:       env("OPENAI_API_KEY", ""),
+		OpenAIModel:        env("OPENAI_MODEL", "gpt-5.5"),
+		OpenAIBaseURL:      env("OPENAI_BASE_URL", "https://api.openai.com"),
 	}
 }
 

@@ -35,6 +35,14 @@ type Config struct {
 	XHSAccessToken     string
 	XHSDraftEndpoint   string
 	XHSPublishEndpoint string
+	XHSWebProfileDir   string
+	XHSWebBrowserPath  string
+	XHSWebRemoteURL    string
+	XHSWebHeadless     bool
+	AIProvider         string
+	OpenAIAPIKey       string
+	OpenAIModel        string
+	OpenAIBaseURL      string
 }
 
 type Account struct {

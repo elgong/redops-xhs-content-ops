@@ -30,7 +30,7 @@ func main() {
 		}
 	}
 
-	service := NewAppService(store, NewConfiguredXHSAdapter(cfg))
+	service := NewAppService(store, NewConfiguredXHSAdapter(cfg), NewConfiguredContentAI(cfg))
 	if cfg.SchedulerEnabled {
 		go startScheduler(context.Background(), service)
 	}

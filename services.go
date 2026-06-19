@@ -75,10 +75,11 @@ func (MockXHSAdapter) Publish(ctx context.Context, account Account, content Gene
 type AppService struct {
 	store   Store
 	adapter XHSAdapter
+	ai      ContentAI
 }
 
-func NewAppService(store Store, adapter XHSAdapter) *AppService {
-	return &AppService{store: store, adapter: adapter}
+func NewAppService(store Store, adapter XHSAdapter, ai ContentAI) *AppService {
+	return &AppService{store: store, adapter: adapter, ai: ai}
 }
 
 func (s *AppService) Collect(ctx context.Context, taskID int64) ([]SourcePost, error) {
@@ -93,6 +94,18 @@ func (s *AppService) Collect(ctx context.Context, taskID int64) ([]SourcePost, e
 		return nil, err
 	}
 	now := time.Now()
+	for i := range posts {
+		posts[i].KeywordTaskID = taskID
+		if posts[i].CapturedAt.IsZero() {
+			posts[i].CapturedAt = now
+		}
+		if posts[i].PublishedAt.IsZero() {
+			posts[i].PublishedAt = now
+		}
+		if posts[i].HotScore == 0 {
+			posts[i].HotScore = hotScore(posts[i].Views, posts[i].Likes, posts[i].Comments, posts[i].Favorites, posts[i].PublishedAt)
+		}
+	}
 	task.LastCollectedAt = &now
 	task.Status = StatusRunning
 	if err := s.store.AddSourcePosts(ctx, posts); err != nil {
@@ -153,19 +166,11 @@ func (s *AppService) Analyze(ctx context.Context, taskID int64) (InsightReport, 
 	if err != nil {
 		return InsightReport{}, err
 	}
-	var total float64
-	for _, post := range posts {
-		total += post.HotScore
+	report, err := s.ai.Analyze(ctx, task, posts)
+	if err != nil {
+		return InsightReport{}, err
 	}
-	avg := total / float64(len(posts))
-	report := InsightReport{
-		KeywordTaskID:      taskID,
-		AverageHotScore:    round(avg),
-		TitlePatterns:      "痛点提醒 + 真实体验 + 结果承诺弱化；常见词：真的、别乱、后悔没早知道",
-		StyleTags:          "真实分享,朋友式提醒,清单化,少广告感",
-		AudiencePainPoints: fmt.Sprintf("%s相关用户主要关注适用人群、预算、操作顺序和避坑。", task.Keyword),
-		RiskHints:          "避免绝对化功效、诱导互动、站外导流和大面积复制爆文原句。",
-	}
+	report.KeywordTaskID = taskID
 	return s.store.SaveInsight(ctx, report)
 }
 
@@ -182,33 +187,21 @@ func (s *AppService) Generate(ctx context.Context, taskID, accountID int64, inst
 		}
 	}
 	rules, _ := s.store.GetRules(ctx)
-	version := 1
-	title := fmt.Sprintf("%s真的别乱做，我踩过坑", task.Keyword)
-	if strings.Contains(instruction, "标题") || strings.Contains(instruction, "夸张") {
-		title = fmt.Sprintf("%s这套顺序我想早点知道", task.Keyword)
-		version = 2
+	accounts, err := s.store.ListAccounts(ctx)
+	if err != nil {
+		return GeneratedContent{}, err
 	}
-	body := fmt.Sprintf("最近看了不少%s相关内容，发现高热笔记都不是硬讲道理，而是先说真实场景。我的建议是先把步骤拆简单，再根据自己的预算和使用频率慢慢调整。\n\n%s\n\n适合想提高效率、又不想被复杂流程劝退的人。", task.Keyword, insight.AudiencePainPoints)
-	if instruction != "" {
-		body += "\n\n本次根据审核意见调整：" + instruction
+	account, ok := findAccount(accounts, accountID)
+	if !ok {
+		return GeneratedContent{}, fmt.Errorf("账号不存在，请先绑定账号")
 	}
-	tags := fmt.Sprintf("#%s #%s经验 #运营灵感 #真实分享", strings.ReplaceAll(task.Keyword, " ", ""), task.Category)
-	risk := "low"
-	if containsAny(title+body+tags, rules.BannedPhrases) {
-		risk = "high"
+	content, err := s.ai.Generate(ctx, task, insight, rules, account, instruction)
+	if err != nil {
+		return GeneratedContent{}, err
 	}
-	content := GeneratedContent{
-		KeywordTaskID:  taskID,
-		AccountID:      accountID,
-		Title:          title,
-		Body:           body,
-		CoverText:      fmt.Sprintf("%s避坑清单", task.Keyword),
-		Tags:           tags,
-		RiskLevel:      risk,
-		DuplicateScore: 0.16 + rand.Float64()*0.18,
-		Status:         ContentPendingReview,
-		Version:        version,
-	}
+	content.KeywordTaskID = taskID
+	content.AccountID = accountID
+	content.Status = ContentPendingReview
 	return s.store.CreateContent(ctx, content)
 }
 
@@ -355,7 +348,14 @@ func findAccount(accounts []Account, id int64) (Account, bool) {
 
 func hotScore(views, likes, comments, favorites int, publishedAt time.Time) float64 {
 	if views <= 0 {
-		return 0
+		engagements := likes + comments*3 + favorites*2
+		if engagements <= 0 {
+			return 0
+		}
+		hours := math.Max(time.Since(publishedAt).Hours(), 1)
+		freshness := math.Max(0, 1-hours/168)
+		score := math.Log(float64(engagements)+1)*9 + freshness*18
+		return round(math.Min(score, 100))
 	}
 	likeRate := float64(likes) / float64(views)
 	commentRate := float64(comments) / float64(views)

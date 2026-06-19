@@ -20,15 +20,25 @@ type XHSOpenAPIAdapter struct {
 }
 
 func NewConfiguredXHSAdapter(cfg Config) XHSAdapter {
-	if cfg.XHSAdapterMode != "openapi" {
+	switch cfg.XHSAdapterMode {
+	case "web", "browser":
+		return XHSWebAdapter{
+			ProfileDir:  cfg.XHSWebProfileDir,
+			BrowserPath: cfg.XHSWebBrowserPath,
+			RemoteURL:   cfg.XHSWebRemoteURL,
+			Headless:    cfg.XHSWebHeadless,
+			Timeout:     45 * time.Second,
+		}
+	case "openapi":
+		return XHSOpenAPIAdapter{
+			BaseURL:         strings.TrimRight(cfg.XHSBaseURL, "/"),
+			AccessToken:     cfg.XHSAccessToken,
+			DraftEndpoint:   cfg.XHSDraftEndpoint,
+			PublishEndpoint: cfg.XHSPublishEndpoint,
+			Client:          &http.Client{Timeout: 15 * time.Second},
+		}
+	default:
 		return MockXHSAdapter{}
-	}
-	return XHSOpenAPIAdapter{
-		BaseURL:         strings.TrimRight(cfg.XHSBaseURL, "/"),
-		AccessToken:     cfg.XHSAccessToken,
-		DraftEndpoint:   cfg.XHSDraftEndpoint,
-		PublishEndpoint: cfg.XHSPublishEndpoint,
-		Client:          &http.Client{Timeout: 15 * time.Second},
 	}
 }
 

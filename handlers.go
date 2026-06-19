@@ -418,13 +418,32 @@ func (s *Server) handleXHSStatus(w http.ResponseWriter, r *http.Request) {
 		methodNotAllowed(w)
 		return
 	}
-	_, openapi := s.service.adapter.(XHSOpenAPIAdapter)
+	adapter := "mock"
+	keywordSearch := false
+	materialUpload := false
+	switch s.service.adapter.(type) {
+	case XHSOpenAPIAdapter:
+		adapter = "openapi"
+		materialUpload = true
+	case XHSWebAdapter:
+		adapter = "web"
+		keywordSearch = true
+	}
+	aiProvider := "local"
+	openAIConfigured := false
+	if ai, ok := s.service.ai.(OpenAIContentAI); ok {
+		aiProvider = "openai"
+		openAIConfigured = strings.TrimSpace(ai.client.APIKey) != ""
+	}
 	writeJSON(w, http.StatusOK, map[string]any{
-		"adapter":                   map[bool]string{true: "openapi", false: "mock"}[openapi],
+		"adapter":                   adapter,
+		"keyword_search_web":        keywordSearch,
 		"keyword_search_official":   false,
-		"material_upload":           openapi,
+		"material_upload":           materialUpload,
 		"draft_endpoint_required":   true,
 		"publish_endpoint_required": true,
+		"ai_provider":               aiProvider,
+		"openai_configured":         openAIConfigured,
 	})
 }
 
