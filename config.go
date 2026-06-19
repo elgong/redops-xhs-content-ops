@@ -24,10 +24,17 @@ func LoadConfig() Config {
 		XHSWebRemoteURL:    env("XHS_WEB_REMOTE_URL", "http://127.0.0.1:9222"),
 		XHSWebHeadless:     envBool("XHS_WEB_HEADLESS", false),
 		AIProvider:         strings.ToLower(env("AI_PROVIDER", "openai")),
-		OpenAIAPIKey:       env("OPENAI_API_KEY", env("DEEPSEEK_API_KEY", "")),
+		OpenAIAPIKey:       aiAPIKey(strings.ToLower(env("AI_PROVIDER", "openai"))),
 		OpenAIModel:        env("OPENAI_MODEL", "gpt-4o-mini"),
 		OpenAIBaseURL:      env("OPENAI_BASE_URL", "https://api.openai.com"),
 	}
+}
+
+func aiAPIKey(provider string) string {
+	if provider == "deepseek" {
+		return env("DEEPSEEK_API_KEY", env("OPENAI_API_KEY", ""))
+	}
+	return env("OPENAI_API_KEY", "")
 }
 
 func StoreMode() string {

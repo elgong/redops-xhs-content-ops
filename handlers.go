@@ -474,15 +474,20 @@ func (s *Server) handleSettings(w http.ResponseWriter, r *http.Request) {
 		}
 		s.cfg = cfg
 		_ = os.Setenv("AI_PROVIDER", cfg.AIProvider)
-		_ = os.Setenv("OPENAI_API_KEY", cfg.OpenAIAPIKey)
+		keyEnv := "OPENAI_API_KEY"
+		if cfg.AIProvider == "deepseek" {
+			keyEnv = "DEEPSEEK_API_KEY"
+		}
+		_ = os.Setenv(keyEnv, cfg.OpenAIAPIKey)
 		_ = os.Setenv("OPENAI_MODEL", cfg.OpenAIModel)
 		_ = os.Setenv("OPENAI_BASE_URL", cfg.OpenAIBaseURL)
-		if err := updateDotEnv(".env", map[string]string{
+		updates := map[string]string{
 			"AI_PROVIDER":     cfg.AIProvider,
-			"OPENAI_API_KEY":  cfg.OpenAIAPIKey,
 			"OPENAI_MODEL":    cfg.OpenAIModel,
 			"OPENAI_BASE_URL": cfg.OpenAIBaseURL,
-		}); err != nil {
+			keyEnv:            cfg.OpenAIAPIKey,
+		}
+		if err := updateDotEnv(".env", updates); err != nil {
 			writeError(w, err)
 			return
 		}
