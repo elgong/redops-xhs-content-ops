@@ -69,6 +69,31 @@ http://127.0.0.1:8080
 | `AUTO_MIGRATE` | `true` | 启动时自动建表 |
 | `SEED_DATA` | `true` | 启动时写入演示账号与关键词 |
 | `SCHEDULER_ENABLED` | `true` | 是否启动定时发布扫描器 |
+| `XHS_ADAPTER` | `mock` | `mock` 或 `openapi` |
+| `XHS_BASE_URL` | `https://ark.xiaohongshu.com` | 小红书 OpenAPI 基础地址 |
+| `XHS_ACCESS_TOKEN` | 空 | 开放平台访问令牌 |
+| `XHS_DRAFT_ENDPOINT` | 空 | 有草稿权限后配置草稿接口 |
+| `XHS_PUBLISH_ENDPOINT` | 空 | 有发布权限后配置发布接口 |
+
+## 小红书开放接口接入
+
+当前代码内置两种适配器：
+
+- `MockXHSAdapter`：默认模式，完整跑通采集、草稿和发布闭环，不访问小红书。
+- `XHSOpenAPIAdapter`：开放平台模式，通过 `XHS_ADAPTER=openapi` 开启。
+
+已接入/预留能力：
+
+- 官方素材上传：`POST /api/xhs/materials`，内部调用 `/ark/open_api/v3/common_controller`。
+- 草稿保存：通过 `XHS_DRAFT_ENDPOINT` 配置有权限的接口地址。
+- 发布笔记：通过 `XHS_PUBLISH_ENDPOINT` 配置有权限的接口地址。
+- 关键词笔记搜索：官方公开目录未确认通用接口，当前不会做未授权抓取；建议使用授权数据源、人工导入或申请对应数据权限。
+
+官方参考：
+
+- 小红书开放平台应用类目与权限：https://xiaohongshu.apifox.cn/
+- 素材中心上传素材：https://xiaohongshu.apifox.cn/api-24925828
+- 小红书分享开放平台：https://agora.xiaohongshu.com/
 
 ## 说明
 

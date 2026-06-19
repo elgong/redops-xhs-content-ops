@@ -25,11 +25,16 @@ const (
 )
 
 type Config struct {
-	Addr             string
-	MySQLDSN         string
-	AutoMigrate      bool
-	SeedData         bool
-	SchedulerEnabled bool
+	Addr               string
+	MySQLDSN           string
+	AutoMigrate        bool
+	SeedData           bool
+	SchedulerEnabled   bool
+	XHSAdapterMode     string
+	XHSBaseURL         string
+	XHSAccessToken     string
+	XHSDraftEndpoint   string
+	XHSPublishEndpoint string
 }
 
 type Account struct {

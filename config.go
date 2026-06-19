@@ -9,11 +9,16 @@ import (
 func LoadConfig() Config {
 	loadDotEnv(".env")
 	return Config{
-		Addr:             env("APP_ADDR", ":8080"),
-		MySQLDSN:         env("MYSQL_DSN", ""),
-		AutoMigrate:      envBool("AUTO_MIGRATE", true),
-		SeedData:         envBool("SEED_DATA", true),
-		SchedulerEnabled: envBool("SCHEDULER_ENABLED", true),
+		Addr:               env("APP_ADDR", ":8080"),
+		MySQLDSN:           env("MYSQL_DSN", ""),
+		AutoMigrate:        envBool("AUTO_MIGRATE", true),
+		SeedData:           envBool("SEED_DATA", true),
+		SchedulerEnabled:   envBool("SCHEDULER_ENABLED", true),
+		XHSAdapterMode:     strings.ToLower(env("XHS_ADAPTER", "mock")),
+		XHSBaseURL:         env("XHS_BASE_URL", "https://ark.xiaohongshu.com"),
+		XHSAccessToken:     env("XHS_ACCESS_TOKEN", ""),
+		XHSDraftEndpoint:   env("XHS_DRAFT_ENDPOINT", ""),
+		XHSPublishEndpoint: env("XHS_PUBLISH_ENDPOINT", ""),
 	}
 }
 

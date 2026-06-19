@@ -32,6 +32,8 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("/api/publish-tasks", s.handlePublishTasks)
 	mux.HandleFunc("/api/publish/run-due", s.handleRunDue)
 	mux.HandleFunc("/api/rules", s.handleRules)
+	mux.HandleFunc("/api/xhs/status", s.handleXHSStatus)
+	mux.HandleFunc("/api/xhs/materials", s.handleXHSMaterials)
 	return logMiddleware(mux)
 }
 
@@ -354,6 +356,47 @@ func (s *Server) handleRules(w http.ResponseWriter, r *http.Request) {
 	default:
 		methodNotAllowed(w)
 	}
+}
+
+func (s *Server) handleXHSStatus(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		methodNotAllowed(w)
+		return
+	}
+	_, openapi := s.service.adapter.(XHSOpenAPIAdapter)
+	writeJSON(w, http.StatusOK, map[string]any{
+		"adapter":                   map[bool]string{true: "openapi", false: "mock"}[openapi],
+		"keyword_search_official":   false,
+		"material_upload":           openapi,
+		"draft_endpoint_required":   true,
+		"publish_endpoint_required": true,
+	})
+}
+
+func (s *Server) handleXHSMaterials(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		methodNotAllowed(w)
+		return
+	}
+	adapter, ok := s.service.adapter.(XHSOpenAPIAdapter)
+	if !ok {
+		writeError(w, errors.New("当前为 mock adapter，请设置 XHS_ADAPTER=openapi 后再调用素材接口"))
+		return
+	}
+	var req MaterialUploadRequest
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	if strings.TrimSpace(req.Name) == "" || strings.TrimSpace(req.Type) == "" {
+		writeError(w, errors.New("name 和 type 必填"))
+		return
+	}
+	resp, err := adapter.UploadMaterial(r.Context(), req)
+	if err != nil {
+		writeError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, resp)
 }
 
 func parseActionPath(path, prefix string) (int64, string, bool) {
