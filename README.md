@@ -90,6 +90,7 @@ http://127.0.0.1:8080
 | `OPENAI_API_KEY` | 空 | OpenAI 或 DeepSeek API Key，AI 分析/生成必填 |
 | `OPENAI_MODEL` | `gpt-4o-mini` | 模型名；DeepSeek 可用 `deepseek-v4-flash` 或 `deepseek-v4-pro` |
 | `OPENAI_BASE_URL` | `https://api.openai.com` | API 基础地址；DeepSeek 使用 `https://api.deepseek.com` |
+| `XHS_WORKFLOW_OUTPUT_DIR` | `~/Documents/red/xhs-output` | 图文包工作流输出目录 |
 
 ## 跑通完整链路
 
@@ -123,6 +124,7 @@ launchctl kickstart -k gui/$(id -u)/com.redops.local
 - 点击“分析”：`AI_PROVIDER=openai` 或 `deepseek` 调用 AI 生成热点洞察
 - 点击“生成”：GPT 根据洞察生成标题、正文、封面字和标签
 - 审核通过或驳回重生
+- 在审核详情点击“生成图文包”：输出 `content.md`、`cards.html` 和 `exports/page-*.png`
 - 保存草稿/定时发布需要配置官方授权的 `XHS_DRAFT_ENDPOINT` 和 `XHS_PUBLISH_ENDPOINT`
 
 ## 小红书开放接口接入

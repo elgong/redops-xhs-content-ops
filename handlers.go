@@ -33,10 +33,12 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("/api/contents/", s.handleContentAction)
 	mux.HandleFunc("/api/publish-tasks", s.handlePublishTasks)
 	mux.HandleFunc("/api/publish/run-due", s.handleRunDue)
+	mux.HandleFunc("/api/xhs-packages", s.handleXHSPackages)
 	mux.HandleFunc("/api/rules", s.handleRules)
 	mux.HandleFunc("/api/settings", s.handleSettings)
 	mux.HandleFunc("/api/xhs/status", s.handleXHSStatus)
 	mux.HandleFunc("/api/xhs/materials", s.handleXHSMaterials)
+	mux.Handle("/xhs-output/", http.StripPrefix("/xhs-output/", http.FileServer(http.Dir(s.cfg.WorkflowOutputDir))))
 	return logMiddleware(mux)
 }
 
@@ -360,6 +362,29 @@ func (s *Server) handleContentAction(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		writeJSON(w, http.StatusCreated, task)
+	case "xhs-package":
+		if r.Method != http.MethodPost {
+			methodNotAllowed(w)
+			return
+		}
+		content, err := s.store.GetContent(r.Context(), id)
+		if err != nil {
+			writeError(w, err)
+			return
+		}
+		writeJSON(w, http.StatusCreated, dynamicXHSWorkflowPackage(content))
+	case "xhs-preview":
+		if r.Method != http.MethodGet {
+			methodNotAllowed(w)
+			return
+		}
+		content, err := s.store.GetContent(r.Context(), id)
+		if err != nil {
+			writeError(w, err)
+			return
+		}
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = w.Write([]byte(renderXHSWorkflowHTML(content, buildXHSWorkflowCards(content))))
 	default:
 		http.NotFound(w, r)
 	}
@@ -389,6 +414,26 @@ func (s *Server) handleRunDue(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"published": count})
+}
+
+func (s *Server) handleXHSPackages(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		methodNotAllowed(w)
+		return
+	}
+	contents, err := s.store.ListContents(r.Context(), "")
+	if err != nil {
+		writeError(w, err)
+		return
+	}
+	items := make([]XHSWorkflowPackage, 0)
+	for _, content := range contents {
+		if content.Status == ContentRejected {
+			continue
+		}
+		items = append(items, dynamicXHSWorkflowPackage(content))
+	}
+	writeJSON(w, http.StatusOK, items)
 }
 
 func (s *Server) handleRules(w http.ResponseWriter, r *http.Request) {

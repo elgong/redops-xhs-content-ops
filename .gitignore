@@ -4,3 +4,4 @@ redops
 *.log
 tmp/
 .DS_Store
+xhs-output/

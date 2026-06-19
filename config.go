@@ -27,6 +27,7 @@ func LoadConfig() Config {
 		OpenAIAPIKey:       aiAPIKey(strings.ToLower(env("AI_PROVIDER", "openai"))),
 		OpenAIModel:        env("OPENAI_MODEL", "gpt-4o-mini"),
 		OpenAIBaseURL:      env("OPENAI_BASE_URL", "https://api.openai.com"),
+		WorkflowOutputDir:  env("XHS_WORKFLOW_OUTPUT_DIR", os.ExpandEnv("$HOME/Documents/red/xhs-output")),
 	}
 }
 

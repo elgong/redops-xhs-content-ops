@@ -43,6 +43,7 @@ type Config struct {
 	OpenAIAPIKey       string
 	OpenAIModel        string
 	OpenAIBaseURL      string
+	WorkflowOutputDir  string
 }
 
 type Account struct {
@@ -114,6 +115,21 @@ type GeneratedContent struct {
 	UpdatedAt      time.Time  `json:"updated_at"`
 	Keyword        string     `json:"keyword,omitempty"`
 	AccountName    string     `json:"account_name,omitempty"`
+}
+
+type XHSWorkflowPackage struct {
+	ContentID   int64    `json:"content_id"`
+	Title       string   `json:"title"`
+	Dir         string   `json:"dir"`
+	ContentPath string   `json:"content_path"`
+	HTMLPath    string   `json:"html_path"`
+	ExportPaths []string `json:"export_paths"`
+	PreviewURL  string   `json:"preview_url"`
+	ExportsURL  string   `json:"exports_url"`
+	Exported    bool     `json:"exported"`
+	ExportError string   `json:"export_error,omitempty"`
+	PageCount   int      `json:"page_count"`
+	GeneratedAt string   `json:"generated_at"`
 }
 
 type ReviewRecord struct {
