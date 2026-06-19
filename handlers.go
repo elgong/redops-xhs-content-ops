@@ -201,6 +201,28 @@ func (s *Server) handleKeywordAction(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		writeJSON(w, http.StatusCreated, posts)
+	case "import-text":
+		if r.Method != http.MethodPost {
+			methodNotAllowed(w)
+			return
+		}
+		var req struct {
+			RawText string `json:"raw_text"`
+		}
+		if !decodeJSON(w, r, &req) {
+			return
+		}
+		parsed, err := ParseXHSWebText(req.RawText)
+		if err != nil {
+			writeError(w, err)
+			return
+		}
+		posts, err := s.service.ImportPosts(r.Context(), id, parsed)
+		if err != nil {
+			writeError(w, err)
+			return
+		}
+		writeJSON(w, http.StatusCreated, posts)
 	case "posts":
 		if r.Method != http.MethodGet {
 			methodNotAllowed(w)

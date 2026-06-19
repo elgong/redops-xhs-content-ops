@@ -27,6 +27,15 @@ http://127.0.0.1:8080
 ./run-memory.sh
 ```
 
+当前电脑已配置用户级后台服务：
+
+```bash
+launchctl print gui/$(id -u)/com.redops.local
+launchctl kickstart -k gui/$(id -u)/com.redops.local
+```
+
+运行产物部署在 `~/.redops`，代码仍维护在当前仓库。这样可以避开 macOS 对 `Documents` 目录的后台服务访问限制。
+
 ## MySQL 初始化
 
 已经执行过：
@@ -85,6 +94,7 @@ http://127.0.0.1:8080
 已接入/预留能力：
 
 - 授权样本导入：`POST /api/keywords/{id}/import`，支持人工或合规数据源导入笔记指标。
+- 网页文本导入：`POST /api/keywords/{id}/import-text`，支持粘贴从小红书网页复制出的标题、链接、点赞、评论、收藏、浏览文本。
 - 官方素材上传：`POST /api/xhs/materials`，内部调用 `/ark/open_api/v3/common_controller`。
 - 草稿保存：通过 `XHS_DRAFT_ENDPOINT` 配置有权限的接口地址。
 - 发布笔记：通过 `XHS_PUBLISH_ENDPOINT` 配置有权限的接口地址。
@@ -109,6 +119,16 @@ curl -X POST http://127.0.0.1:8080/api/keywords/1/import \
   }'
 ```
 
+网页文本导入示例：
+
+```bash
+curl -X POST http://127.0.0.1:8080/api/keywords/1/import-text \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "raw_text": "早C晚A真的别乱叠，我脸红了三天\n浏览 12.8万 点赞 8420 评论 516 收藏 2104\nhttps://www.xiaohongshu.com/explore/example"
+  }'
+```
+
 官方参考：
 
 - 小红书开放平台应用类目与权限：https://xiaohongshu.apifox.cn/
@@ -118,5 +138,6 @@ curl -X POST http://127.0.0.1:8080/api/keywords/1/import \
 ## 说明
 
 - 小红书真实采集/发布能力通过 `XHSAdapter` 接口预留，默认使用 `MockXHSAdapter`，不会绕过平台登录、验证码或风控。
+- 当前 `.env` 使用 `XHS_ADAPTER=openapi` 和 `SEED_DATA=false`，不会写入演示数据。
 - AI 文案生成目前是本地规则生成器，保留 `Generator` 接口，后续可替换为大模型服务。
-- 采集功能默认生成模拟样本，也支持通过 API 扩展为官方授权接口或人工导入。
+- 关键词自动采集仅在 mock 模式生成模拟样本；真实模式下请使用官方授权接口、网页文本导入或人工审核导入。
