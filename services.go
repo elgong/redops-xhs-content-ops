@@ -56,20 +56,29 @@ func (MockXHSAdapter) Collect(ctx context.Context, task KeywordTask) ([]SourcePo
 }
 
 func (MockXHSAdapter) SaveDraft(ctx context.Context, account Account, content GeneratedContent) (string, error) {
-	if account.AuthStatus != "正常" {
+	if !accountReady(account.AuthStatus) {
 		return "", fmt.Errorf("账号授权状态为%s，无法保存草稿", account.AuthStatus)
 	}
 	return fmt.Sprintf("draft_%d_%d", content.ID, time.Now().Unix()), nil
 }
 
 func (MockXHSAdapter) Publish(ctx context.Context, account Account, content GeneratedContent) (string, error) {
-	if account.AuthStatus != "正常" {
+	if !accountReady(account.AuthStatus) {
 		return "", fmt.Errorf("账号授权状态为%s，无法发布", account.AuthStatus)
 	}
 	if content.DraftID == "" {
 		return "", fmt.Errorf("内容尚未保存草稿")
 	}
 	return fmt.Sprintf("https://www.xiaohongshu.com/mock/%d", content.ID), nil
+}
+
+func accountReady(status string) bool {
+	switch strings.ToLower(strings.TrimSpace(status)) {
+	case "", "正常", "normal", "ok", "active", "authorized", "verified":
+		return true
+	default:
+		return false
+	}
 }
 
 type AppService struct {
@@ -256,11 +265,12 @@ func (s *AppService) SaveDraft(ctx context.Context, contentID int64) (GeneratedC
 	if !ok {
 		return GeneratedContent{}, ErrNotFound
 	}
+	previousStatus := content.Status
 	content.Status = ContentDraftSaving
 	_ = s.store.UpdateContent(ctx, content)
 	draftID, err := s.adapter.SaveDraft(ctx, account, content)
 	if err != nil {
-		content.Status = ContentPublishFailed
+		content.Status = previousStatus
 		_ = s.store.UpdateContent(ctx, content)
 		return GeneratedContent{}, err
 	}

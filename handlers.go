@@ -431,6 +431,7 @@ func (s *Server) handleSettings(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		cfg := s.cfg
+		previousProvider := cfg.AIProvider
 		if strings.TrimSpace(req.AIProvider) != "" {
 			cfg.AIProvider = strings.ToLower(strings.TrimSpace(req.AIProvider))
 		}
@@ -446,21 +447,24 @@ func (s *Server) handleSettings(w http.ResponseWriter, r *http.Request) {
 		if cfg.AIProvider == "" {
 			cfg.AIProvider = "openai"
 		}
+		providerChanged := previousProvider != cfg.AIProvider
+		if providerChanged && strings.TrimSpace(req.OpenAIAPIKey) == "" {
+			cfg.OpenAIAPIKey = storedProviderAPIKey(cfg.AIProvider)
+		}
 		switch cfg.AIProvider {
 		case "deepseek":
-			if cfg.OpenAIModel == "" || strings.HasPrefix(cfg.OpenAIModel, "gpt-") {
+			if cfg.OpenAIModel == "" || cfg.OpenAIModel == "local" || strings.HasPrefix(cfg.OpenAIModel, "gpt-") || providerChanged && strings.TrimSpace(req.OpenAIModel) == "" {
 				cfg.OpenAIModel = "deepseek-v4-flash"
 			}
 			if cfg.OpenAIBaseURL == "" || strings.Contains(cfg.OpenAIBaseURL, "api.openai.com") {
 				cfg.OpenAIBaseURL = "https://api.deepseek.com"
 			}
 		case "local":
-			if cfg.OpenAIModel == "" {
-				cfg.OpenAIModel = "local"
-			}
+			cfg.OpenAIModel = "local"
+			cfg.OpenAIBaseURL = ""
 		default:
 			cfg.AIProvider = "openai"
-			if cfg.OpenAIModel == "" || strings.HasPrefix(cfg.OpenAIModel, "deepseek-") {
+			if cfg.OpenAIModel == "" || cfg.OpenAIModel == "local" || strings.HasPrefix(cfg.OpenAIModel, "deepseek-") || providerChanged && strings.TrimSpace(req.OpenAIModel) == "" {
 				cfg.OpenAIModel = "gpt-4o-mini"
 			}
 			if cfg.OpenAIBaseURL == "" || strings.Contains(cfg.OpenAIBaseURL, "deepseek.com") {
@@ -474,18 +478,17 @@ func (s *Server) handleSettings(w http.ResponseWriter, r *http.Request) {
 		}
 		s.cfg = cfg
 		_ = os.Setenv("AI_PROVIDER", cfg.AIProvider)
-		keyEnv := "OPENAI_API_KEY"
-		if cfg.AIProvider == "deepseek" {
-			keyEnv = "DEEPSEEK_API_KEY"
-		}
-		_ = os.Setenv(keyEnv, cfg.OpenAIAPIKey)
 		_ = os.Setenv("OPENAI_MODEL", cfg.OpenAIModel)
 		_ = os.Setenv("OPENAI_BASE_URL", cfg.OpenAIBaseURL)
 		updates := map[string]string{
 			"AI_PROVIDER":     cfg.AIProvider,
 			"OPENAI_MODEL":    cfg.OpenAIModel,
 			"OPENAI_BASE_URL": cfg.OpenAIBaseURL,
-			keyEnv:            cfg.OpenAIAPIKey,
+		}
+		if cfg.AIProvider != "local" {
+			keyEnv := providerAPIKeyEnv(cfg.AIProvider)
+			_ = os.Setenv(keyEnv, cfg.OpenAIAPIKey)
+			updates[keyEnv] = cfg.OpenAIAPIKey
 		}
 		if err := updateDotEnv(".env", updates); err != nil {
 			writeError(w, err)
@@ -498,9 +501,11 @@ func (s *Server) handleSettings(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) settingsPayload() map[string]any {
+	configured := s.cfg.AIProvider == "local" || strings.TrimSpace(s.cfg.OpenAIAPIKey) != ""
 	aiStatus := map[string]any{
 		"ai_provider":       s.cfg.AIProvider,
-		"openai_configured": strings.TrimSpace(s.cfg.OpenAIAPIKey) != "",
+		"api_configured":    configured,
+		"openai_configured": configured,
 		"openai_model":      s.cfg.OpenAIModel,
 		"openai_base_url":   s.cfg.OpenAIBaseURL,
 	}
@@ -533,12 +538,12 @@ func (s *Server) handleXHSStatus(w http.ResponseWriter, r *http.Request) {
 		keywordSearch = true
 	}
 	aiProvider := "local"
-	openAIConfigured := false
+	apiConfigured := false
 	openAIModel := ""
 	if ai, ok := s.service.ai.(*ReloadableContentAI); ok {
 		status := ai.Status()
 		aiProvider, _ = status["ai_provider"].(string)
-		openAIConfigured, _ = status["openai_configured"].(bool)
+		apiConfigured, _ = status["api_configured"].(bool)
 		openAIModel, _ = status["openai_model"].(string)
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
@@ -549,7 +554,8 @@ func (s *Server) handleXHSStatus(w http.ResponseWriter, r *http.Request) {
 		"draft_endpoint_required":   true,
 		"publish_endpoint_required": true,
 		"ai_provider":               aiProvider,
-		"openai_configured":         openAIConfigured,
+		"api_configured":            apiConfigured,
+		"openai_configured":         apiConfigured,
 		"openai_model":              openAIModel,
 	})
 }

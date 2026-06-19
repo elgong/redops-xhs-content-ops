@@ -37,6 +37,17 @@ func aiAPIKey(provider string) string {
 	return env("OPENAI_API_KEY", "")
 }
 
+func providerAPIKeyEnv(provider string) string {
+	if provider == "deepseek" {
+		return "DEEPSEEK_API_KEY"
+	}
+	return "OPENAI_API_KEY"
+}
+
+func storedProviderAPIKey(provider string) string {
+	return strings.TrimSpace(os.Getenv(providerAPIKeyEnv(provider)))
+}
+
 func StoreMode() string {
 	mode := strings.ToLower(strings.TrimSpace(env("APP_STORE", "")))
 	if mode != "" {

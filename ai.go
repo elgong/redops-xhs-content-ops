@@ -56,13 +56,20 @@ func (ai *ReloadableContentAI) Update(cfg Config) {
 func (ai *ReloadableContentAI) Status() map[string]any {
 	ai.mu.RLock()
 	defer ai.mu.RUnlock()
-	configured := strings.TrimSpace(ai.cfg.OpenAIAPIKey) != ""
+	provider := strings.ToLower(strings.TrimSpace(ai.cfg.AIProvider))
+	hasKey := strings.TrimSpace(ai.cfg.OpenAIAPIKey) != ""
+	configured := provider == "local" || hasKey
+	baseURL := ai.cfg.OpenAIBaseURL
+	if provider == "local" {
+		baseURL = ""
+	}
 	return map[string]any{
-		"ai_provider":       ai.cfg.AIProvider,
-		"api_configured":    configured,
-		"openai_configured": configured,
-		"openai_model":      ai.cfg.OpenAIModel,
-		"openai_base_url":   ai.cfg.OpenAIBaseURL,
+		"ai_provider":         ai.cfg.AIProvider,
+		"api_configured":      configured,
+		"openai_configured":   provider == "openai" && hasKey,
+		"deepseek_configured": provider == "deepseek" && hasKey,
+		"openai_model":        ai.cfg.OpenAIModel,
+		"openai_base_url":     baseURL,
 	}
 }
 
@@ -72,7 +79,7 @@ func newContentAI(cfg Config) ContentAI {
 		return LocalContentAI{}
 	case "deepseek":
 		model := cfg.OpenAIModel
-		if model == "" || strings.HasPrefix(model, "gpt-") {
+		if model == "" || model == "local" || strings.HasPrefix(model, "gpt-") {
 			model = "deepseek-v4-flash"
 		}
 		baseURL := cfg.OpenAIBaseURL
@@ -89,7 +96,7 @@ func newContentAI(cfg Config) ContentAI {
 		}
 	default:
 		model := cfg.OpenAIModel
-		if model == "" || strings.HasPrefix(model, "deepseek-") {
+		if model == "" || model == "local" || strings.HasPrefix(model, "deepseek-") {
 			model = "gpt-4o-mini"
 		}
 		baseURL := cfg.OpenAIBaseURL
@@ -257,7 +264,7 @@ func (c OpenAIClient) Respond(ctx context.Context, instructions, input string) (
 		return "", fmt.Errorf("未配置 OPENAI_API_KEY，无法使用 GPT 分析和生成")
 	}
 	if c.Model == "" {
-		c.Model = "gpt-5.5"
+		c.Model = "gpt-4o-mini"
 	}
 	if c.BaseURL == "" {
 		c.BaseURL = "https://api.openai.com"
