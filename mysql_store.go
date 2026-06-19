@@ -77,6 +77,40 @@ func (s *MySQLStore) ListAccounts(ctx context.Context) ([]Account, error) {
 	return out, rows.Err()
 }
 
+func (s *MySQLStore) CreateAccount(ctx context.Context, a Account) (Account, error) {
+	if a.AccountType == "" {
+		a.AccountType = "品牌号"
+	}
+	if a.AuthStatus == "" {
+		a.AuthStatus = "待绑定"
+	}
+	if a.DailyLimit == 0 {
+		a.DailyLimit = 8
+	}
+	if a.ExceptionStatus == "" {
+		a.ExceptionStatus = "未验证"
+	}
+	res, err := s.db.ExecContext(ctx, `INSERT INTO accounts (name, account_type, auth_status, daily_limit, today_scheduled, exception_status) VALUES (?,?,?,?,?,?)`, a.Name, a.AccountType, a.AuthStatus, a.DailyLimit, a.TodayScheduled, a.ExceptionStatus)
+	if err != nil {
+		return Account{}, err
+	}
+	a.ID, _ = res.LastInsertId()
+	return s.getAccount(ctx, a.ID)
+}
+
+func (s *MySQLStore) getAccount(ctx context.Context, id int64) (Account, error) {
+	var a Account
+	var last sql.NullTime
+	err := s.db.QueryRowContext(ctx, `SELECT id, name, account_type, auth_status, daily_limit, today_scheduled, last_published_at, exception_status, created_at FROM accounts WHERE id=?`, id).Scan(&a.ID, &a.Name, &a.AccountType, &a.AuthStatus, &a.DailyLimit, &a.TodayScheduled, &last, &a.ExceptionStatus, &a.CreatedAt)
+	if errors.Is(err, sql.ErrNoRows) {
+		return Account{}, ErrNotFound
+	}
+	if last.Valid {
+		a.LastPublishedAt = &last.Time
+	}
+	return a, err
+}
+
 func (s *MySQLStore) ListKeywords(ctx context.Context) ([]KeywordTask, error) {
 	rows, err := s.db.QueryContext(ctx, `SELECT id, keyword, category, frequency_minutes, sample_limit, status, last_collected_at, created_by, created_at FROM keyword_tasks ORDER BY id`)
 	if err != nil {

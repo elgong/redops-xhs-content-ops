@@ -67,9 +67,9 @@ http://127.0.0.1:8080
 | `APP_STORE` | `mysql` | `mysql` 或 `memory` |
 | `MYSQL_DSN` | 见 `.env.example` | MySQL 连接串 |
 | `AUTO_MIGRATE` | `true` | 启动时自动建表 |
-| `SEED_DATA` | `true` | 启动时写入演示账号与关键词 |
+| `SEED_DATA` | `false` | 启动时写入演示账号与关键词，本项目默认关闭 |
 | `SCHEDULER_ENABLED` | `true` | 是否启动定时发布扫描器 |
-| `XHS_ADAPTER` | `mock` | `mock` 或 `openapi` |
+| `XHS_ADAPTER` | `openapi` | `mock` 或 `openapi` |
 | `XHS_BASE_URL` | `https://ark.xiaohongshu.com` | 小红书 OpenAPI 基础地址 |
 | `XHS_ACCESS_TOKEN` | 空 | 开放平台访问令牌 |
 | `XHS_DRAFT_ENDPOINT` | 空 | 有草稿权限后配置草稿接口 |

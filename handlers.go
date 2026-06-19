@@ -77,16 +77,32 @@ func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleAccounts(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
+	switch r.Method {
+	case http.MethodGet:
+		accounts, err := s.store.ListAccounts(r.Context())
+		if err != nil {
+			writeError(w, err)
+			return
+		}
+		writeJSON(w, http.StatusOK, accounts)
+	case http.MethodPost:
+		var req Account
+		if !decodeJSON(w, r, &req) {
+			return
+		}
+		if strings.TrimSpace(req.Name) == "" {
+			writeError(w, errors.New("账号名称不能为空"))
+			return
+		}
+		account, err := s.store.CreateAccount(r.Context(), req)
+		if err != nil {
+			writeError(w, err)
+			return
+		}
+		writeJSON(w, http.StatusCreated, account)
+	default:
 		methodNotAllowed(w)
-		return
 	}
-	accounts, err := s.store.ListAccounts(r.Context())
-	if err != nil {
-		writeError(w, err)
-		return
-	}
-	writeJSON(w, http.StatusOK, accounts)
 }
 
 func (s *Server) handleKeywords(w http.ResponseWriter, r *http.Request) {

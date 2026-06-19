@@ -15,6 +15,7 @@ type Store interface {
 	Close() error
 	Seed(context.Context) error
 	ListAccounts(context.Context) ([]Account, error)
+	CreateAccount(context.Context, Account) (Account, error)
 	ListKeywords(context.Context) ([]KeywordTask, error)
 	CreateKeyword(context.Context, KeywordTask) (KeywordTask, error)
 	GetKeyword(context.Context, int64) (KeywordTask, error)
@@ -116,6 +117,27 @@ func (s *MemoryStore) ListAccounts(ctx context.Context) ([]Account, error) {
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
 	return out, nil
+}
+
+func (s *MemoryStore) CreateAccount(ctx context.Context, account Account) (Account, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	account.ID = s.id()
+	if account.AccountType == "" {
+		account.AccountType = "品牌号"
+	}
+	if account.AuthStatus == "" {
+		account.AuthStatus = "待绑定"
+	}
+	if account.DailyLimit == 0 {
+		account.DailyLimit = 8
+	}
+	if account.ExceptionStatus == "" {
+		account.ExceptionStatus = "未验证"
+	}
+	account.CreatedAt = time.Now()
+	s.accounts[account.ID] = account
+	return account, nil
 }
 
 func (s *MemoryStore) ListKeywords(ctx context.Context) ([]KeywordTask, error) {
